@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 from src.core.protocols import INotificationPublisher, IUnitOfWork
-from src.infrastructure.notifications.dto import ActionButton, NotificationPayload
+from src.infrastructure.notifications.dto import NotificationEventType, NotificationPayload
 from src.modules.reminders.domain.interfaces import IReminderRepository
 from src.modules.users.public import UsersPublicGateway
 
@@ -44,22 +44,18 @@ class CheckExpiringTrialsAndDiscountsUseCase:
                 sub.convert_trial_to_paid(now_utc, user_timezone=ctx.timezone)
                 await self._reminder_repo.save(sub)
 
-                body = (
-                    f"💳 Пробний період підписки '{sub.title}' завершився!\n"
-                    f"Підписку переведено у регулярний платний статус. "
-                    f"Сума чергового списання: {sub.regular_amount}."
-                )
                 payloads.append(
                     NotificationPayload(
+                        event_type=NotificationEventType.TRIAL_EXPIRED,
                         recipient_channel="telegram",
                         recipient_chat_id=ctx.telegram_chat_id,
+                        user_timezone=ctx.timezone,
                         reminder_id=sub.id,
-                        title=f"Завершення тріалу: {sub.title}",
-                        body=body,
-                        buttons=[
-                            ActionButton(text="💳 Оплачено", callback_data=f"reminder:payment:{sub.id}"),
-                            ActionButton(text="❌ Скасувати підписку", callback_data=f"reminder:cancel:{sub.id}"),
-                        ],
+                        reminder_type=sub.reminder_type,
+                        title=sub.title,
+                        description=sub.description,
+                        amount=sub.regular_amount.amount,
+                        currency=sub.regular_amount.currency,
                     )
                 )
 

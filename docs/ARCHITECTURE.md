@@ -69,20 +69,35 @@ flowchart TD
 * Розрахунок часу спрацювання нагадувань і перевірка тихих годин завжди виконуються **в контексті часового поясу конкретного користувача**, тоді як у БД всі таймстемпи зберігаються строго в **UTC (`TIMESTAMPTZ`)**.
 
 ### 2.2. Розв'язка бекенда від Telegram (Redis Delivery Queue)
-Бекенд та фоновий шедулер ARQ нічого не знають про Telegram SDK:
-1. ARQ-задача, визначивши, що настав час нагадування, формує стандартизований DTO:
+Бекенд та фоновий шедулер ARQ нічого не знають про Telegram SDK та presentation-шар (тексти повідомлень, HTML-теги, емодзі, інлайн-кнопки чи callback_data):
+1. ARQ-задача, визначивши, що настав час нагадування, формує чистий структурований доменний DTO:
    ```python
    class NotificationPayload(BaseModel):
-       recipient_channel: str = "telegram"
+       event_type: NotificationEventType = NotificationEventType.REMINDER_DUE
        recipient_chat_id: int
+       reminder_id: UUID | None = None
+       reminder_type: str | None = None
        title: str
-       body: str
-       buttons: list[ActionButton] = []
+       description: str | None = None
+       category: str | None = None
+       effective_priority: str | None = None
+       price: Decimal | None = None
+       currency: str | None = None
+       price_uah: Decimal | None = None
+       exchange_provider: str | None = None
+       is_rate_stale: bool = False
+       dosage: str | None = None
+       can_complete: bool = False
+       can_record_payment: bool = False
+       can_record_intake: bool = False
+       can_snooze: bool = False
+       snooze_options_minutes: list[int] = []
        disable_sound: bool = False
    ```
 2. Подія публікується в Redis: `LPUSH queue:notifications:telegram <json>`.
-3. Окремий легкий воркер всередині контейнера бота читає чергу через блокуючий `BRPOP queue:notifications:telegram` і надсилає повідомлення через `bot.send_message(...)`.
-4. Якщо контейнер бота перезавантажується — жодне нагадування не втрачається, воно безпечно очікує в Redis.
+3. Окремий легкий воркер всередині контейнера бота читає чергу через блокуючий `BRPOP queue:notifications:telegram`.
+4. Бот самостійно рендерить красивий HTML-текст (`format_notification_payload`) та генерує типізовані інлайн-кнопки (`build_notification_keyboard` через `ReminderActionCallback`), після чого надсилає повідомлення через `bot.send_message(...)`.
+5. Якщо контейнер бота перезавантажується — жодне нагадування не втрачається, воно безпечно очікує в Redis.
 
 ### 2.3. Безпека без Nginx та доменів
 * Бот працює через **Long Polling** (сам робить вихідні HTTPS-запити до серверів Telegram).
@@ -346,12 +361,12 @@ FOR UPDATE SKIP LOCKED;
    * **Якщо `strict_schedule == False`**: нагадування **не відправляється зараз**. Поле `next_trigger_at` просто зсувається на ранковий час закінчення тихих годин: `user.quiet_hours_end + 5 хвилин`.
    * **Якщо `strict_schedule == True`** (критичні ліки): перевірка тихих годин ігнорується, нагадування надсилається негайно.
 
-#### Етап 4: Збагачення даними (Data Enrichment)
-* **Для валютних підписок**: витягується актуальний курс обраного банку (з перевіркою >48 годин і фолбеком на НБУ при необхідності), формується рядок: `Spotify: $9.99 (~415 грн за курсом Monobank)`.
-* **Для ліків**: підраховується поточний день курсу («День 3 з 10, прийом 2 з 3»).
-* **Для дедлайн-задач**: якщо пріоритет `UNSET` і в налаштуваннях `user_settings.auto_deadline_priority_escalation == True`, розраховується коефіцієнт $R$ і призначається динамічний пріоритет (додається бейдж терміновості `[КРИТИЧНО]`). Якщо пріоритет вказано явно або опцію вимкнено — динамічний перерахунок не перезаписує пріоритет.
-* **Для Open задач**: використовується явно заданий пріоритет (якщо вказано) для сортування в дайджесті.
-* **Формування кнопок дій**: генеруються інлайн-кнопки (`[💊 Прийняв]`, `[⏰ +15 хв]`, `[💳 Оплачено]`, `[❌ Скасував тріал]`).
+#### Етап 4: Збагачення доменними даними (Data Enrichment)
+* **Для валютних підписок**: витягується актуальний курс обраного банку (з перевіркою >48 годин і фолбеком на НБУ при необхідності), розраховується еквівалент у гривні: `price`, `currency`, `price_uah`, `exchange_provider`, `is_rate_stale`.
+* **Для ліків**: передається поточний день курсу та порядковий номер прийому (`course_day_current`, `course_days_total`, `intake_current`, `intakes_per_day`, `dosage`).
+* **Для дедлайн-задач**: якщо пріоритет `UNSET` і в налаштуваннях `user_settings.auto_deadline_priority_escalation == True`, розраховується коефіцієнт $R$ і призначається динамічний `effective_priority` (`LOW` .. `CRITICAL`).
+* **Для Open задач**: формується масив відкритих пунктів `digest_tasks` із пріоритетами та категоріями для зведеного дайджесту.
+* **Доступні дії користувача**: Use Cases виставляють бінарні прапорці дозволених операцій (`can_complete`, `can_record_payment`, `can_record_intake`, `can_snooze`, `snooze_options_minutes`). Жодного HTML-коду, UI-емодзі чи `callback_data` бекенд не генерує!
 
 #### Етап 5: Атомарний перерахунок наступної дати (Time-Series Projection)
 У тій же транзакції бази даних виконується перерахунок без використання крихких числових індексів елементів:
@@ -367,20 +382,22 @@ FOR UPDATE SKIP LOCKED;
   * Якщо курс завершено (`NOW() > medication_end_date`), статус переводиться у `COMPLETED`. Для безстрокових ліків (`end_date = NULL`) цикл продовжується нескінченно.
 * Запис оновлюється: `UPDATE reminders SET next_trigger_at = :new_trigger, version = version + 1, updated_at = NOW() WHERE id = :id AND version = :expected_version`.
 
-#### Етап 6: Черга доставки в Redis та відправка ботом
+#### Етап 6: Черга доставки в Redis, презентація та відправка ботом
 1. Сформований `NotificationPayload` серіалізується в JSON і публікується в Redis: `LPUSH queue:notifications:telegram <json>`.
-2. В окремому процесі Bot Service працює нескінченний асинхронний споживач:
+2. У сервісі Telegram-бота працює асинхронний споживач `RedisNotificationConsumer`:
    ```python
    while True:
        _, raw = await redis.brpop("queue:notifications:telegram", timeout=0)
        payload = NotificationPayload.model_validate_json(raw)
-       msg = await bot.send_message(
+       text = format_notification_payload(payload)
+       keyboard = build_notification_keyboard(payload)
+       await bot.send_message(
            chat_id=payload.recipient_chat_id,
-           text=payload.body,
-           reply_markup=payload.keyboard
+           text=text,
+           reply_markup=keyboard,
        )
    ```
-   *`BRPOP` забезпечує миттєву доставку без додаткового циклічного полінгу та нульове споживання CPU в режимі очікування.*
+   *`BRPOP` забезпечує миттєву доставку без додаткового циклічного полінгу та нульове споживання CPU в режимі очікування. Форматування тексту та клавіатур інкапсульовано суворо в шарі бота.*
 
 #### Етап 7: Інтерактивний зворотний зв'язок (UX Inline Actions)
 Коли користувач натискає інлайн-кнопку в Telegram:
@@ -425,9 +442,9 @@ FOR UPDATE SKIP LOCKED;
   * **Write Side (`domain/` + `application/` + `infrastructure/`)**: багаті доменні агрегати, Use Cases, контроль транзакцій через `IUnitOfWork`.
   * **Read Side (`queries/`)**: оптимізовані `QueryService` для швидких `SELECT` напряму в Pydantic v2 DTO.
   * **Міжмодульна взаємодія (`public.py`)**: суворо через контракти `PublicGateway` зі списком `__all__` (прямий імпорт внутрішніх моделей між модулями у Write-пайплайні заборонений).
-* **`src/api/`** — презентаційний шар FastAPI (роутери `/api/v1`, DI-провайдери, глобальні обробники винятків).
-* **`src/tasks/`** — фоновий воркер та Cron-шедулер ARQ.
-* **`src/bot/`** — сервіс Telegram-бота (`aiogram 3.x` Long Polling + фоновий `BRPOP` споживач черги Redis).
+* **`src/api/`** — презентаційний HTTP шар FastAPI (`main.py` точка входу та фабрика `create_app()`, роутери `/api/v1`, DI-провайдери, глобальні обробники винятків).
+* **`src/tasks/`** — фоновий воркер та Cron-шедулер ARQ (`worker.py` з `WorkerSettings` та прямим запуском `run_worker`).
+* **`src/bot/`** — сервіс Telegram-бота (`bot.py` фабрика екземплярів бота і диспетчера, `main.py` точка входу `run_bot` у режимі Long Polling + фоновий `BRPOP` споживач черги Redis).
 
 ---
 

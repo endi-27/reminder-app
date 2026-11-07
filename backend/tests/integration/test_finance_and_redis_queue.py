@@ -8,7 +8,7 @@ from uuid6 import uuid7
 from src.core.config import settings
 from src.core.redis import RedisClient
 from src.infrastructure.notifications import (
-    ActionButton,
+    NotificationEventType,
     NotificationPayload,
     RedisQueuePublisher,
 )
@@ -16,6 +16,7 @@ from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
 from src.modules.finance.domain.models import ExchangeRate
 from src.modules.finance.infrastructure.repository import SqlAlchemyExchangeRateRepository
 from src.modules.finance.queries.query_service import FinanceQueryService
+from src.modules.reminders.domain.enums import ReminderType
 
 
 @pytest.mark.asyncio
@@ -157,14 +158,13 @@ async def test_redis_queue_publisher_publish_and_brpop(redis_client: RedisClient
 
     reminder_id = uuid7()
     payload = NotificationPayload(
+        event_type=NotificationEventType.REMINDER_DUE,
         recipient_chat_id=987654321,
         reminder_id=reminder_id,
-        title="⏰ Час прийняти ліки",
-        body="Препарат: Амоксицилін, дозування 500 мг.",
-        buttons=[
-            ActionButton(text="✅ Прийнято", callback_data=f"med:taken:{reminder_id}"),
-            ActionButton(text="⏳ Відкласти (15 хв)", callback_data=f"med:snooze:{reminder_id}"),
-        ],
+        reminder_type=ReminderType.MEDICATION,
+        title="Час прийняти ліки",
+        description="Препарат: Амоксицилін, дозування 500 мг.",
+        strict_schedule=True,
         disable_sound=False,
     )
 
@@ -179,23 +179,23 @@ async def test_redis_queue_publisher_publish_and_brpop(redis_client: RedisClient
 
     # 3. Десеріалізація та валідація вмісту
     received_payload = NotificationPayload.model_validate_json(raw_json)
+    assert received_payload.event_type == NotificationEventType.REMINDER_DUE
     assert received_payload.recipient_chat_id == 987654321
     assert received_payload.reminder_id == reminder_id
-    assert received_payload.title == "⏰ Час прийняти ліки"
-    assert len(received_payload.buttons) == 2
-    assert received_payload.buttons[0].callback_data == f"med:taken:{reminder_id}"
+    assert received_payload.reminder_type == ReminderType.MEDICATION
+    assert received_payload.title == "Час прийняти ліки"
+    assert received_payload.description == "Препарат: Амоксицилін, дозування 500 мг."
+    assert received_payload.strict_schedule is True
 
     # 4. Перевірка пакетної відправки через publish_many
     batch = [
         NotificationPayload(
             recipient_chat_id=111,
             title="Дайджест 1",
-            body="Текст 1",
         ),
         NotificationPayload(
             recipient_chat_id=222,
             title="Дайджест 2",
-            body="Текст 2",
         ),
     ]
     published_count = await publisher.publish_many(batch)

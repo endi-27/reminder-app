@@ -4,7 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from uuid6 import uuid7
 
-from src.main import app
+from src.api.main import app
 from src.modules.reminders.application.dto import SchedulerBatchResultDTO
 from src.modules.reminders.public import RemindersPublicGateway
 from tests.unit.fakes import FakeNotificationPublisher, FakeUnitOfWork
@@ -37,7 +37,7 @@ async def test_reminders_public_gateway_transaction_boundary() -> None:
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "src.modules.reminders.public.ProcessDueRemindersUseCase",
+            "src.modules.reminders.application.use_cases.process_due_reminders.ProcessDueRemindersUseCase",
             lambda **kwargs: mock_use_case,
         )
 

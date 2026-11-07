@@ -6,9 +6,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from uuid6 import uuid7
 
+from src.api.main import app
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
 from src.core.security import SystemRole, create_access_token
-from src.main import app
 from src.modules.finance.dependencies import (
     get_currency_converter_service,
     get_finance_query_service,

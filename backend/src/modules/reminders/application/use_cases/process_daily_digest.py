@@ -3,7 +3,11 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from src.core.protocols import INotificationPublisher, IUnitOfWork
-from src.infrastructure.notifications.dto import NotificationPayload
+from src.infrastructure.notifications.dto import (
+    DigestTaskItemDTO,
+    NotificationEventType,
+    NotificationPayload,
+)
 from src.modules.reminders.domain.aggregates import OpenTaskReminder
 from src.modules.reminders.domain.interfaces import IReminderRepository
 from src.modules.reminders.domain.value_objects import QuietHoursWindow
@@ -52,15 +56,21 @@ class ProcessDailyDigestUseCase:
                 timezone_name=ctx.timezone,
             )
 
-            lines = [f"• {t.title}" for t in user_tasks]
-            body = "📋 Ваш щоденний дайджест відкритих справ:\n" + "\n".join(lines)
-
             payloads.append(
                 NotificationPayload(
+                    event_type=NotificationEventType.DAILY_DIGEST,
                     recipient_channel="telegram",
                     recipient_chat_id=ctx.telegram_chat_id,
-                    title="Щоденний дайджест справ",
-                    body=body,
+                    user_timezone=ctx.timezone,
+                    digest_tasks=[
+                        DigestTaskItemDTO(
+                            reminder_id=t.id,
+                            title=t.title,
+                            description=t.description,
+                            priority=t.base_priority,
+                        )
+                        for t in user_tasks
+                    ],
                 )
             )
 

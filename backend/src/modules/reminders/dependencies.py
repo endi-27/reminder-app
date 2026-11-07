@@ -9,12 +9,18 @@ from src.core.protocols import INotificationPublisher, IUnitOfWork
 from src.core.redis import RedisClient, get_redis_client
 from src.infrastructure.notifications.redis_queue_publisher import RedisQueuePublisher
 from src.modules.finance.public import FinancePublicGateway
-from src.modules.reminders.application.use_cases import (
+from src.modules.reminders.application.use_cases.create_reminder import (
     CreateReminderUseCase,
-    HandleReminderActionUseCase,
+)
+from src.modules.reminders.application.use_cases.delete_reminder import (
     HardDeleteReminderUseCase,
-    PatchReminderUseCase,
     SoftDeleteReminderUseCase,
+)
+from src.modules.reminders.application.use_cases.handle_reminder_action import (
+    HandleReminderActionUseCase,
+)
+from src.modules.reminders.application.use_cases.update_reminder import (
+    PatchReminderUseCase,
     UpdateReminderUseCase,
 )
 from src.modules.reminders.domain.interfaces import (

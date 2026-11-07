@@ -7,6 +7,7 @@ import pytest
 from uuid6 import uuid7
 
 from src.core.exceptions import OptimisticLockConflictException
+from src.infrastructure.notifications import NotificationEventType
 from src.modules.reminders.application.dto import (
     PatchReminderCommand,
     ReminderActionCommand,
@@ -392,7 +393,10 @@ class TestProcessDueRemindersUseCase:
         assert result.deferred_to_quiet_hours == 0
         assert result.notifications_queued == 1
         assert publisher.count() == 1
-        assert "💊 Час прийому ліків: Нічний інсулін" in publisher.published_payloads[0].body
+        payload = publisher.published_payloads[0]
+        assert payload.event_type == NotificationEventType.REMINDER_DUE
+        assert payload.title == "Нічний інсулін"
+        assert payload.strict_schedule is True
 
     @pytest.mark.asyncio
     async def test_usd_subscription_converted_to_uah_with_action_buttons(self) -> None:
@@ -441,8 +445,10 @@ class TestProcessDueRemindersUseCase:
         assert result.notifications_queued == 1
         payload = publisher.published_payloads[0]
 
-        assert "20.00 USD (≈ 830.00 грн за курсом MONOBANK)" in payload.body
-        button_texts = [b.text for b in payload.buttons]
-        assert "💳 Оплачено" in button_texts
-        assert "⏰ Нагадати завтра" in button_texts
-        assert "❌ Скасувати підписку" in button_texts
+        assert payload.event_type == NotificationEventType.REMINDER_DUE
+        assert payload.title == "ChatGPT Plus"
+        assert payload.amount == Decimal("20.00")
+        assert payload.currency == CurrencyCode.USD
+        assert payload.converted_amount_uah == Decimal("830.00")
+        assert payload.rate_provider == "MONOBANK"
+        assert payload.is_stale_rate_fallback is False

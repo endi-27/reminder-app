@@ -51,13 +51,12 @@ reminder-app/
     │   └── api/                         # E2E / API тести HTTP роутерів (httpx.AsyncClient) [.keep]
     │
     └── src/                             # Вихідний код системи
-        ├── main.py                      # Точка входу FastAPI додатку (lifespan, middlewares, routers)
-        ├── core/                        # Ядро системи (чисті конфігурації, протоколи, базовий домен)
-        ├── infrastructure/              # Інфраструктурні адаптери (SQLAlchemy Base, UoW, Redis, Mappers)
+        ├── api/                         # HTTP презентаційний шар (FastAPI main.py, Routers, Schemas, DI)
+        ├── bot/                         # Telegram Bot сервіс (bot.py фабрика, main.py раннер, Redis Consumer)
+        ├── tasks/                       # Фоновий воркер та Cron-шедулер (ARQ worker.py)
         ├── modules/                     # ДОМЕННІ МОДУЛІ БІЗНЕСУ (Модульний моноліт: users, reminders, finance)
-        ├── api/                         # HTTP презентаційний шар (FastAPI Routers, Schemas, DI)
-        ├── tasks/                       # Фоновий воркер та Cron-шедулер (ARQ)
-        └── bot/                         # Telegram Bot сервіс (aiogram 3.x Long Polling + Redis Consumer)
+        ├── infrastructure/              # Інфраструктурні адаптери (SQLAlchemy Base, UoW, Redis, Mappers)
+        └── core/                        # Ядро системи (чисті конфігурації, протоколи, базовий домен)
 ```
 
 ---
@@ -100,7 +99,8 @@ reminder-app/
 ---
 
 ### 2.3. `src/api/` — HTTP Презентаційний шар (FastAPI)
-* `__init__.py`: Публічний фасад презентаційного шару.
+* `__init__.py`: Публічний фасад презентаційного шару (експортує `app`, `create_app` та DI залежності).
+* `main.py`: Точка входу FastAPI додатку (`create_app`, `lifespan`, роутери, запуск через Uvicorn).
 * `dependencies.py`: Глобальні FastAPI `Depends`-провайдери (`get_uow`, `get_current_user`, `require_role`).
 * `middlewares.py`: HTTP-мідлвари (CORS, Request Context Logger для Loguru).
 * `exception_handlers.py`: Глобальна трансляція доменних та інфраструктурних винятків у стандартизовані HTTP JSON-відповіді (зокрема `StaleDataError` / `OptimisticLockConflictException` $\rightarrow$ `HTTP 409 Conflict`).
@@ -124,16 +124,34 @@ reminder-app/
 ---
 
 ### 2.5. `src/bot/` — Сервіс Telegram-бота (aiogram 3.x)
-* `main.py`: Точка входу сервісу бота (запуск `Dispatcher.start_polling(bot)` у закритій мережі без публічних портів + запуск фонового споживача черги Redis).
-* `consumer.py`: Асинхронний воркер доставки (`BRPOP queue:notifications:telegram`), який миттєво надсилає сформовані сповіщення з інлайн-кнопками в Telegram.
+* `bot.py`: Фабрика компонентів Telegram-бота (`BOT_COMMANDS`, `create_bot`, `create_dispatcher`).
+* `main.py`: Точка входу сервісу бота (запуск `run_bot()` у режимі Long Polling + запуск фонового споживача черги Redis).
+* `consumer.py`: Асинхронний воркер доставки (`BRPOP queue:notifications:telegram`), який десеріалізує `NotificationPayload`, форматує HTML та надсилає повідомлення з інлайн-кнопками в Telegram.
+* `client/`:
+  * `api_client.py`: Внутрішній асинхронний HTTP-клієнт `BackendApiClient` (`httpx.AsyncClient`) з автентифікацією через `X-Internal-Token` + `X-Telegram-Id`.
+  * `exceptions.py`: Клієнтські винятки бекенду (`BotApiError`, `BotApiNotFoundError`, `BotApiConflictError`, `BotApiValidationError`).
+* `callbacks/`:
+  * `data.py`: Суворо типізовані фабрики `CallbackData` (`ReminderActionCallback`, `ReminderListFilterCallback`, `ReminderDetailCallback`, `CreateReminderTypeCallback`, `CreateWizardCallback`, `SettingsCallback`) із дотриманням ліміту Telegram `<= 64 bytes`.
+* `states/`:
+  * `reminder_create.py`: FSM-стани покрокових майстрів створення нагадувань для 5 типів.
+  * `settings_edit.py`: FSM-стани редагування персональних налаштувань користувача.
+* `formatters/`:
+  * `messages.py`: Чисті функції генерації безпечного HTML-розмітки (`format_notification_payload`, `format_reminder_detail_message`, `format_rates_message`, `format_settings_message`) із переводом часу в таймзону користувача.
+* `keyboards/`:
+  * `reply.py`: Головне меню 2x2 та клавіатура швидкого скасування дій.
+  * `inline_reminders.py`: Інлайн-клавіатури категорій, фільтрів, пагінації, карток дій та сповіщень.
+  * `inline_settings.py`: Інлайн-клавіатури вибору банку, таймзони, тихих годин та ескалації дедлайнів.
 * `middlewares/`:
-  * `auth.py`: Автоматична ідентифікація/реєстрація користувача за `telegram_id` через `UsersPublicGateway`.
-  * `logging.py`: Логування подій бота через `Loguru`.
+  * `auth.py`: `BotAuthMiddleware` — синхронізація профілю користувача за `telegram_id` через бекенд та інжекція `current_user` і `api_client`.
+  * `logging.py`: `BotLoggingMiddleware` — логування подій Telegram через `Loguru`.
 * `handlers/`:
-  * `start.py`: Команди `/start`, `/help`, первинне налаштування профілю.
-  * `settings.py`: Керування часовим поясом, тихими годинами, пріоритетним банком та автоескалацією пріоритету.
-  * `reminders.py`: Створення/перегляд нагадувань та обробка Callback-натискань інлайн-кнопок (`[💊 Прийняв]`, `[⏰ +15 хв]`, `[💳 Оплачено]`, `[❌ Скасував тріал]`, `[✅ Виконано]`) із редагуванням повідомлення на місці (`edit_message_text`).
-* `keyboards/`: Генератори інлайн- та реплай-клавіатур.
+  * `start.py`: Команди `/start`, `/help`, `/cancel` та швидке скасування FSM.
+  * `settings.py`: Меню перегляду та інтерактивної зміни персональних налаштувань.
+  * `finance.py`: Зведення актуальних курсів валют банків за командою `/rates`.
+  * `reminders_list.py`: Перегляд нагадувань за категоріями, пагінація, деталі, статистика ліків, пауза та видалення.
+  * `reminders_actions.py`: Обробка натискань кнопок під сповіщеннями (`[💊 Прийняв]`, `[⏰ +15 хв]`, `[💳 Оплачено]`, `[❌ Скасував тріал]`, `[✅ Виконано]`) з редагуванням повідомлення на місці.
+  * `reminders_create.py`: 5 інтерактивних FSM-майстрів створення всіх типів нагадувань.
+  * `errors.py`: Глобальний обробник неперехоплених помилок бота.
 
 ---
 

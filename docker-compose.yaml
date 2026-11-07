@@ -201,7 +201,6 @@ services:
   # 7. Сервіс Telegram-бота (aiogram 3.x Long Polling + Redis Consumer)
   # ----------------------------------------------------------------------------
   bot:
-    profiles: ["bot"]
     build:
       context: ./backend
       dockerfile: Dockerfile

@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from src.core.protocols import INotificationPublisher, IUnitOfWork
-from src.infrastructure.notifications.dto import ActionButton, NotificationPayload
+from src.infrastructure.notifications.dto import NotificationEventType, NotificationPayload
 from src.modules.finance.public import FinancePublicGateway
 from src.modules.reminders.application.dto import SchedulerBatchResultDTO
 from src.modules.reminders.domain.aggregates import (
@@ -12,17 +13,10 @@ from src.modules.reminders.domain.aggregates import (
     OpenTaskReminder,
     SubscriptionReminder,
 )
-from src.modules.reminders.domain.enums import CurrencyCode, Priority
+from src.modules.reminders.domain.enums import CurrencyCode
 from src.modules.reminders.domain.interfaces import IReminderRepository
 from src.modules.reminders.domain.value_objects import QuietHoursWindow
 from src.modules.users.public import UsersPublicGateway
-
-_PRIORITY_LABELS: dict[Priority, str] = {
-    Priority.LOW: "[НИЗЬКИЙ]",
-    Priority.MEDIUM: "[СЕРЕДНІЙ]",
-    Priority.HIGH: "[ВИСОКИЙ]",
-    Priority.CRITICAL: "[КРИТИЧНО]",
-}
 
 
 class ProcessDueRemindersUseCase:
@@ -96,99 +90,115 @@ class ProcessDueRemindersUseCase:
                 deferred_to_quiet_hours += 1
                 continue
 
-            # Формування тексту та кнопок залежно від типу нагадування
-            buttons: list[ActionButton] = []
-            body: str = ""
-
             if isinstance(reminder, SubscriptionReminder):
                 active_money = reminder.active_amount
+                conv_amount_uah: Decimal | None = None
+                rate_provider: str | None = None
+                is_stale: bool = False
                 if active_money.currency in (CurrencyCode.USD, CurrencyCode.EUR):
                     conv = await self._finance_gateway.convert_to_uah(
                         amount=active_money.amount,
                         currency=active_money.currency.value,
                         preferred_bank=ctx.preferred_bank.value,
                     )
-                    cost_text = f"{active_money} (≈ {conv.amount_uah:.2f} грн за курсом {conv.provider_used})"
-                    if conv.is_stale_fallback:
-                        cost_text += " ⚠️ Курс застарілий, використано офіційний курс НБУ."
-                else:
-                    cost_text = f"{active_money}"
+                    conv_amount_uah = conv.amount_uah
+                    rate_provider = str(conv.provider_used)
+                    is_stale = conv.is_stale_fallback
 
-                extra_warn = ""
-                if reminder.is_trial:
-                    extra_warn = "\n⚠️ Закінчується пробний період підписки!"
-                elif reminder.is_last_discount_cycle:
-                    extra_warn = "\n⚠️ Це останній платіжний цикл за зниженою акційною ціною!"
+                if ctx.telegram_chat_id is not None:
+                    payloads_to_publish.append(
+                        NotificationPayload(
+                            event_type=NotificationEventType.REMINDER_DUE,
+                            recipient_channel="telegram",
+                            recipient_chat_id=ctx.telegram_chat_id,
+                            user_timezone=ctx.timezone,
+                            reminder_id=reminder.id,
+                            reminder_type=reminder.reminder_type,
+                            title=reminder.title,
+                            description=reminder.description,
+                            amount=active_money.amount,
+                            currency=active_money.currency,
+                            converted_amount_uah=conv_amount_uah,
+                            rate_provider=rate_provider,
+                            is_stale_rate_fallback=is_stale,
+                            is_trial=reminder.is_trial,
+                            is_last_discount_cycle=reminder.is_last_discount_cycle,
+                        )
+                    )
+                    notifications_queued += 1
 
-                body = f"💳 Нагадування про оплату підписки: {reminder.title}\nСума до сплати: {cost_text}{extra_warn}"
-                buttons = [
-                    ActionButton(text="💳 Оплачено", callback_data=f"reminder:payment:{reminder.id}"),
-                    ActionButton(text="⏰ Нагадати завтра", callback_data=f"reminder:snooze:{reminder.id}:1440"),
-                    ActionButton(text="❌ Скасувати підписку", callback_data=f"reminder:cancel:{reminder.id}"),
-                ]
-
-            elif isinstance(reminder, MedicationReminder):
-                body = f"💊 Час прийому ліків: {reminder.title}"
-                if reminder.description:
-                    body += f"\n{reminder.description}"
-                if reminder.medication_end_date:
-                    body += f"\nКурс триває до: {reminder.medication_end_date.strftime('%d.%m.%Y')}"
-
-                buttons = [
-                    ActionButton(text="💊 Прийняв", callback_data=f"reminder:med_taken:{reminder.id}"),
-                    ActionButton(text="⏰ +15 хв", callback_data=f"reminder:snooze:{reminder.id}:15"),
-                    ActionButton(text="❌ Пропустив", callback_data=f"reminder:med_missed:{reminder.id}"),
-                ]
+            elif isinstance(reminder, MedicationReminder) and ctx.telegram_chat_id is not None:
+                payloads_to_publish.append(
+                    NotificationPayload(
+                        event_type=NotificationEventType.REMINDER_DUE,
+                        recipient_channel="telegram",
+                        recipient_chat_id=ctx.telegram_chat_id,
+                        user_timezone=ctx.timezone,
+                        reminder_id=reminder.id,
+                        reminder_type=reminder.reminder_type,
+                        title=reminder.title,
+                        description=reminder.description,
+                        medication_end_date=reminder.medication_end_date,
+                        strict_schedule=reminder.strict_schedule,
+                    )
+                )
+                notifications_queued += 1
 
             elif isinstance(reminder, DeadlineTaskReminder):
                 effective_prio = reminder.recalculate_priority(
                     now_utc,
                     auto_escalate=ctx.auto_deadline_priority_escalation,
                 )
-                prio_badge = _PRIORITY_LABELS.get(effective_prio, "[ЗВИЧАЙНИЙ]") if effective_prio else "[ЗВИЧАЙНИЙ]"
-                due_str = reminder.due_datetime.astimezone(ZoneInfo(ctx.timezone)).strftime("%d.%m.%Y %H:%M")
-                body = f"{prio_badge} Дедлайн задачі: {reminder.title}\nТермін виконання: {due_str}"
-                if reminder.description:
-                    body += f"\n{reminder.description}"
-
-                buttons = [
-                    ActionButton(text="✅ Виконано", callback_data=f"reminder:complete:{reminder.id}"),
-                    ActionButton(text="⏰ +1 год", callback_data=f"reminder:snooze:{reminder.id}:60"),
-                ]
+                if ctx.telegram_chat_id is not None:
+                    payloads_to_publish.append(
+                        NotificationPayload(
+                            event_type=NotificationEventType.REMINDER_DUE,
+                            recipient_channel="telegram",
+                            recipient_chat_id=ctx.telegram_chat_id,
+                            user_timezone=ctx.timezone,
+                            reminder_id=reminder.id,
+                            reminder_type=reminder.reminder_type,
+                            title=reminder.title,
+                            description=reminder.description,
+                            due_datetime=reminder.due_datetime,
+                            effective_priority=effective_prio,
+                        )
+                    )
+                    notifications_queued += 1
 
             elif isinstance(reminder, AnniversaryReminder):
                 local_now = now_utc.astimezone(ZoneInfo(ctx.timezone))
                 age = reminder.calculate_age(local_now.year)
-                age_text = f" ({age} р.)" if age is not None else ""
-                body = f"🎉 Сьогодні святкова подія: {reminder.title}{age_text}!"
-                if reminder.description:
-                    body += f"\n{reminder.description}"
+                if ctx.telegram_chat_id is not None:
+                    payloads_to_publish.append(
+                        NotificationPayload(
+                            event_type=NotificationEventType.REMINDER_DUE,
+                            recipient_channel="telegram",
+                            recipient_chat_id=ctx.telegram_chat_id,
+                            user_timezone=ctx.timezone,
+                            reminder_id=reminder.id,
+                            reminder_type=reminder.reminder_type,
+                            title=reminder.title,
+                            description=reminder.description,
+                            calculated_age=age,
+                        )
+                    )
+                    notifications_queued += 1
 
-                buttons = [
-                    ActionButton(text="✅ Привітав", callback_data=f"reminder:complete:{reminder.id}"),
-                ]
-
-            elif isinstance(reminder, OpenTaskReminder):
-                body = f"📋 Нагадування про справу: {reminder.title}"
-                if reminder.description:
-                    body += f"\n{reminder.description}"
-
-                buttons = [
-                    ActionButton(text="✅ Виконано", callback_data=f"reminder:complete:{reminder.id}"),
-                    ActionButton(text="⏰ Відкласти", callback_data=f"reminder:snooze:{reminder.id}:180"),
-                ]
-
-            # Якщо у користувача підключено Telegram — ставимо сповіщення у чергу
-            if ctx.telegram_chat_id is not None:
-                payload = NotificationPayload(
-                    recipient_channel="telegram",
-                    recipient_chat_id=ctx.telegram_chat_id,
-                    reminder_id=reminder.id,
-                    title=reminder.title,
-                    body=body,
-                    buttons=buttons,
+            elif isinstance(reminder, OpenTaskReminder) and ctx.telegram_chat_id is not None:
+                payloads_to_publish.append(
+                    NotificationPayload(
+                        event_type=NotificationEventType.REMINDER_DUE,
+                        recipient_channel="telegram",
+                        recipient_chat_id=ctx.telegram_chat_id,
+                        user_timezone=ctx.timezone,
+                        reminder_id=reminder.id,
+                        reminder_type=reminder.reminder_type,
+                        title=reminder.title,
+                        description=reminder.description,
+                        effective_priority=reminder.base_priority,
+                    )
                 )
-                payloads_to_publish.append(payload)
                 notifications_queued += 1
 
             # Просування розкладу нагадування вперед

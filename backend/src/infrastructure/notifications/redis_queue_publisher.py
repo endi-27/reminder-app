@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -9,7 +9,9 @@ from src.core.config import settings
 from src.core.logger import logger
 from src.core.protocols import INotificationPublisher
 from src.core.redis import RedisClient
-from src.infrastructure.notifications.dto import NotificationPayload
+
+if TYPE_CHECKING:
+    from src.infrastructure.notifications.dto import NotificationPayload
 
 
 class RedisQueuePublisher(INotificationPublisher):
@@ -29,11 +31,11 @@ class RedisQueuePublisher(INotificationPublisher):
 
     def _serialize_payload(self, payload: NotificationPayload | dict[str, Any] | BaseModel) -> str:
         """Серіалізація об'єкта або словника сповіщення у JSON-рядок."""
-        if isinstance(payload, NotificationPayload):
-            return payload.model_dump_json()
         if isinstance(payload, BaseModel):
             return payload.model_dump_json()
         if isinstance(payload, dict):
+            from src.infrastructure.notifications.dto import NotificationPayload
+
             return NotificationPayload.model_validate(payload).model_dump_json()
         msg = f"Непідтримуваний тип корисного навантаження сповіщення: {type(payload)}"
         raise TypeError(msg)

@@ -25,6 +25,7 @@ from src.api.dependencies import (
     require_role,
     verify_bot_internal_token,
 )
+from src.api.main import app
 from src.api.schemas import (
     PaginatedResponse,
     PaginationParams,
@@ -49,7 +50,6 @@ from src.core.security import CurrentUser, SystemRole, create_access_token
 from src.infrastructure.db.base import Base
 from src.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from src.infrastructure.notifications.redis_queue_publisher import RedisQueuePublisher
-from src.main import app
 
 
 class TestPaginationAndOccSchemas:

@@ -62,3 +62,11 @@ class WorkerSettings:
         password=settings.redis.password,
         database=settings.redis.databases.task,
     )
+
+
+if __name__ == "__main__":
+    from typing import cast
+
+    from arq import run_worker
+
+    run_worker(cast(Any, WorkerSettings))

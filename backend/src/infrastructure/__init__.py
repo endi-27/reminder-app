@@ -18,19 +18,21 @@ from src.infrastructure.db import (
     is_loaded,
 )
 from src.infrastructure.notifications import (
-    ActionButton,
+    DigestTaskItemDTO,
+    NotificationEventType,
     NotificationPayload,
     RedisQueuePublisher,
 )
 
 __all__ = [
     "POSTGRES_NAMING_CONVENTION",
-    "ActionButton",
     "Base",
     "BaseMapper",
     "BaseQueryService",
     "CreatedAtMixin",
+    "DigestTaskItemDTO",
     "IdentifiableModelProtocol",
+    "NotificationEventType",
     "NotificationPayload",
     "RedisQueuePublisher",
     "SoftDeleteMixin",

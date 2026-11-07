@@ -5,8 +5,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from uuid6 import uuid7
 
+from src.api.main import app
 from src.core.security import SystemRole, create_access_token
-from src.main import app
 from src.modules.users.application.dto import (
     RegisterTelegramUserCommand,
 )

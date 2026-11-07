@@ -11,12 +11,18 @@ from src.modules.reminders.application.dto import (
     ReminderActionCommand,
     UpdateReminderCommand,
 )
-from src.modules.reminders.application.use_cases import (
+from src.modules.reminders.application.use_cases.create_reminder import (
     CreateReminderUseCase,
-    HandleReminderActionUseCase,
+)
+from src.modules.reminders.application.use_cases.delete_reminder import (
     HardDeleteReminderUseCase,
-    PatchReminderUseCase,
     SoftDeleteReminderUseCase,
+)
+from src.modules.reminders.application.use_cases.handle_reminder_action import (
+    HandleReminderActionUseCase,
+)
+from src.modules.reminders.application.use_cases.update_reminder import (
+    PatchReminderUseCase,
     UpdateReminderUseCase,
 )
 from src.modules.reminders.dependencies import (

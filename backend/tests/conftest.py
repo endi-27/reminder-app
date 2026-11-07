@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 # Ініціалізація змінних тестового оточення перед будь-якими імпортами конфігурації
 os.environ.setdefault("APP_CONFIG__ENVIRONMENT", "test")
 os.environ.setdefault("APP_CONFIG__DB__NAME", "reminder_app_test")
+os.environ["APP_CONFIG__REDIS__DATABASES__DEFAULT"] = "2"
 
 if os.environ.get("APP_CONFIG__AUTH__BCRYPT_ROUNDS") in (None, "12"):
     os.environ["APP_CONFIG__AUTH__BCRYPT_ROUNDS"] = "4"
@@ -23,10 +24,10 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from scripts.seed_superadmin import seed_superadmin
+from src.api.main import app
 from src.core import Settings, get_settings, settings
 from src.core.database import get_db_session
 from src.core.redis import RedisClient, close_redis, get_redis_client
-from src.main import app
 
 # Очищуємо кеш синглтона get_settings, щоб переконатися у підтягуванні тестових параметрів
 get_settings.cache_clear()

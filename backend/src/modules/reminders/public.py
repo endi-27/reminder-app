@@ -9,11 +9,6 @@ from src.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from src.infrastructure.notifications.redis_queue_publisher import RedisQueuePublisher
 from src.modules.finance.public import FinancePublicGateway
 from src.modules.reminders.application.dto import SchedulerBatchResultDTO
-from src.modules.reminders.application.use_cases import (
-    CheckExpiringTrialsAndDiscountsUseCase,
-    ProcessDailyDigestUseCase,
-    ProcessDueRemindersUseCase,
-)
 from src.modules.reminders.infrastructure.repository import SqlAlchemyReminderRepository
 from src.modules.reminders.queries.dto import ReminderResponseDTO
 from src.modules.reminders.queries.query_service import ReminderQueryService
@@ -72,6 +67,10 @@ class RemindersPublicGateway:
 
         Якщо фасад викликано в рамках зовнішньої транзакції, коміт делегується ініціатору (Інваріант 7).
         """
+        from src.modules.reminders.application.use_cases.process_due_reminders import (
+            ProcessDueRemindersUseCase,
+        )
+
         use_case = ProcessDueRemindersUseCase(
             uow=self._uow,
             reminder_repo=self._reminder_repo,
@@ -88,6 +87,10 @@ class RemindersPublicGateway:
         limit: int = 100,
     ) -> int:
         """Запуск розсилки щоденних дайджестів відкритих справ (OPEN_TASK)."""
+        from src.modules.reminders.application.use_cases.process_daily_digest import (
+            ProcessDailyDigestUseCase,
+        )
+
         use_case = ProcessDailyDigestUseCase(
             uow=self._uow,
             reminder_repo=self._reminder_repo,
@@ -103,6 +106,10 @@ class RemindersPublicGateway:
         limit: int = 100,
     ) -> int:
         """Запуск щоденного моніторингу закінчення пробних періодів і знижок підписок."""
+        from src.modules.reminders.application.use_cases.check_expiring_trials import (
+            CheckExpiringTrialsAndDiscountsUseCase,
+        )
+
         use_case = CheckExpiringTrialsAndDiscountsUseCase(
             uow=self._uow,
             reminder_repo=self._reminder_repo,
