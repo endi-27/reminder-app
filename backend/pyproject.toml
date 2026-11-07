@@ -1,0 +1,113 @@
+# ==============================================================================
+# Конфігурація проєкту Reminder App (Бекенд)
+# ==============================================================================
+
+[project]
+name = "reminder-backend"
+version = "0.1.0"
+description = "Self-Hosted Personal Reminder Service Backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.15.0",
+    "alembic>=1.19.1",
+    "arq>=0.28.0",
+    "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
+    "fastapi[standard]>=0.141.1",
+    "greenlet>=3.5.5",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "pydantic-settings>=2.15.0",
+    "pyjwt>=2.13.0",
+    "redis>=5.3.1",
+    "sqlalchemy[asyncio]>=2.0.52",
+    "uuid6>=2025.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "pytest-dotenv>=0.5.2",
+    "ruff>=0.16.5",
+    "types-redis>=4.6.0",
+]
+
+# ------------------------------------------------------------------------------
+# Налаштування тестування (Pytest)
+# ------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+env_files = [".env.test", "../.env.test", "../.env", ".env"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+
+# ------------------------------------------------------------------------------
+# Налаштування лінтера та форматера (Ruff)
+# ------------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+force-exclude = true
+
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "env",
+    "alembic",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # Помилки Pycodestyle
+    "W",   # Попередження Pycodestyle
+    "F",   # Pyflakes (синтаксис, імпорти, невикористані змінні)
+    "I",   # Isort (сортування імпортів)
+    "B",   # Flake8-bugbear (поширені пастки проєктування та async)
+    "UP",  # Pyupgrade (модернізація синтаксису Python)
+    "SIM", # Flake8-simplify (спрощення коду)
+]
+ignore = []
+fixable = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Security",
+]
+
+# ------------------------------------------------------------------------------
+# Налаштування статичного аналізатора типів (Mypy)
+# ------------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests", "scripts"]
+strict = true
+explicit_package_bases = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+exclude = [
+    "alembic",
+]

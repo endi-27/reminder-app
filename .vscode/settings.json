@@ -1,0 +1,89 @@
+{
+  // ---------------------------------------------------------------------------
+  // 1. Python Interpreter та аналіз шляхів (Monorepo Backend)
+  // ---------------------------------------------------------------------------
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "[windows]": {
+    "python.defaultInterpreterPath": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe"
+  },
+  "[linux]": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python"
+  },
+  "[osx]": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python"
+  },
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend",
+    "${workspaceFolder}/backend/src"
+  ],
+  // Базова типізація Pylance (строгу перевірку виконує Mypy)
+  "python.analysis.typeCheckingMode": "basic",
+
+  // ---------------------------------------------------------------------------
+  // 2. Mypy Type Checker (ms-python.mypy-type-checker)
+  // ---------------------------------------------------------------------------
+  "mypy-type-checker.importStrategy": "fromEnvironment",
+  "mypy-type-checker.preferDaemon": true,
+  "mypy-type-checker.reportingScope": "workspace",
+  "mypy-type-checker.cwd": "${workspaceFolder}/backend",
+  "mypy-type-checker.configFile": "${workspaceFolder}/backend/pyproject.toml",
+
+  // ---------------------------------------------------------------------------
+  // 3. Ruff Linter & Formatter (charliermarsh.ruff)
+  // ---------------------------------------------------------------------------
+  "ruff.importStrategy": "fromEnvironment",
+  "ruff.configuration": "${workspaceFolder}/backend/pyproject.toml",
+
+  // ---------------------------------------------------------------------------
+  // 3.1. Pyrefly Type Checker (meta.pyrefly)
+  // ---------------------------------------------------------------------------
+  "python.pyrefly.configPath": "${workspaceFolder}/backend/pyproject.toml",
+
+  // Візуальна межа довжини рядка (120 символів згідно зі стандартом проекту)
+  "editor.rulers": [
+    120
+  ],
+
+  // ---------------------------------------------------------------------------
+  // 4. Правила для Python файлів
+  // ---------------------------------------------------------------------------
+  "[python]": {
+    // Встановлюємо Ruff як головний форматер
+    "editor.defaultFormatter": "charliermarsh.ruff"
+    // Вмикаємо форматування при кожному натисканні Ctrl+S (за потреби розкоментувати):
+    // "editor.formatOnSave": true,
+    // Запускаємо автоматичні виправлення від Ruff при збереженні (за потреби розкоментувати):
+    // "editor.codeActionsOnSave": {
+    //   "source.fixAll": "explicit",
+    //   "source.organizeImports": "explicit"
+    // }
+  },
+
+  // ---------------------------------------------------------------------------
+  // 5. Тестування (Pytest інтеграція у вкладку Testing)
+  // ---------------------------------------------------------------------------
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}/backend",
+  "python.testing.pytestArgs": [
+    "."
+  ],
+
+  // ---------------------------------------------------------------------------
+  // 6. Очищення провідника від службових кеш-директорій
+  // ---------------------------------------------------------------------------
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true
+  },
+  "python.terminal.useEnvFile": true
+}
