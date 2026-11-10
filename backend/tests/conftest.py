@@ -62,14 +62,24 @@ async def setup_test_database() -> AsyncGenerator[None, None]:
             text("SELECT 1 FROM pg_database WHERE datname = :dbname"),
             {"dbname": current_settings.db.name},
         )
-        if not exists:
+        if exists:
             try:
                 await conn.execute(
-                    text(f'CREATE DATABASE "{current_settings.db.name}" OWNER "{current_settings.db.user}"')
+                    text(
+                        f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                        f"WHERE datname = '{current_settings.db.name}' AND pid <> pg_backend_pid()"
+                    )
                 )
-            except Exception as exc:
-                if "already exists" not in str(exc).lower() and "duplicate_database" not in str(exc).lower():
-                    raise
+                await conn.execute(text(f'DROP DATABASE "{current_settings.db.name}"'))
+            except Exception:
+                pass
+        try:
+            await conn.execute(
+                text(f'CREATE DATABASE "{current_settings.db.name}" OWNER "{current_settings.db.user}"')
+            )
+        except Exception as exc:
+            if "already exists" not in str(exc).lower() and "duplicate_database" not in str(exc).lower():
+                raise
     await admin_engine.dispose()
 
     # 2. Застосування міграцій Alembic до тестової БД

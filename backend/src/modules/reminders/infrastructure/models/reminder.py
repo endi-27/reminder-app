@@ -28,6 +28,7 @@ from src.infrastructure.db.base import (
     VersionedMixin,
 )
 from src.modules.reminders.domain.enums import (
+    CurrencyCode,
     Priority,
     ReminderStatus,
     ReminderType,
@@ -73,18 +74,20 @@ class ReminderModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, 
     reminder_type: Mapped[ReminderType] = mapped_column(
         Enum(
             ReminderType,
-            name="reminder_type_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=32,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         nullable=False,
     )
     schedule_logic: Mapped[ScheduleLogicType] = mapped_column(
         Enum(
             ScheduleLogicType,
-            name="schedule_logic_type_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=32,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         nullable=False,
     )
@@ -93,9 +96,10 @@ class ReminderModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, 
     status: Mapped[ReminderStatus] = mapped_column(
         Enum(
             ReminderStatus,
-            name="reminder_status_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=16,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         default=ReminderStatus.ACTIVE,
         server_default="ACTIVE",
@@ -115,25 +119,38 @@ class ReminderModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, 
     base_priority: Mapped[Priority | None] = mapped_column(
         Enum(
             Priority,
-            name="priority_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=16,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         nullable=True,
     )
     calculated_priority: Mapped[Priority | None] = mapped_column(
         Enum(
             Priority,
-            name="priority_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=16,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         nullable=True,
     )
 
     # Специфічні поля: Підписки (Фінанси, Тріали, Знижки)
     regular_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
-    currency: Mapped[str | None] = mapped_column(String(3), default="UAH", server_default="UAH", nullable=True)
+    currency: Mapped[CurrencyCode | None] = mapped_column(
+        Enum(
+            CurrencyCode,
+            native_enum=False,
+            create_constraint=False,
+            length=3,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        default=CurrencyCode.UAH,
+        server_default="UAH",
+        nullable=True,
+    )
     is_trial: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     trial_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     discount_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)

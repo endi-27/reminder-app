@@ -151,18 +151,21 @@ erDiagram
 
 ---
 
-## 3. Перелічення (PostgreSQL ENUMs)
+## 3. Перелічення та типи даних (Enums як VARCHAR з валідацією на рівні Python/SQLAlchemy)
 
-| Назва типу ENUM | Дозволені значення | Опис призначення |
-| :--- | :--- | :--- |
-| `user_role_enum` | `SUPER_ADMIN`<br>`ADMIN`<br>`USER` | Роль користувача в системі для контролю доступу (RBAC). |
-| `reminder_type_enum` | `ANNIVERSARY`<br>`OPEN_TASK`<br>`DEADLINE_TASK`<br>`SUBSCRIPTION`<br>`MEDICATION` | Тип доменного агрегату нагадування. |
-| `schedule_logic_type_enum` | `DATE_WITH_MONTH_INTERVAL`<br>`DAILY_AT_TIMES`<br>`EXACT_DATETIME_DEADLINE`<br>`EXACT_DATE_DEADLINE`<br>`INTERVAL_DAYS`<br>`INTERVAL_HOURS` | 6 фундаментальних логік обчислення розкладу. |
-| `reminder_status_enum` | `ACTIVE`<br>`TRIAL`<br>`COMPLETED`<br>`PAUSED`<br>`CANCELLED` | Життєвий цикл нагадування. |
-| `priority_enum` | `LOW`<br>`MEDIUM`<br>`HIGH`<br>`CRITICAL` | Рівні терміновості задач. |
-| `exchange_rate_provider_enum` | `NBU`<br>`MONOBANK`<br>`PRIVATBANK` | Джерело курсів валют. |
-| `end_of_month_policy_enum` | `LAST_DAY_OF_MONTH`<br>`FIRST_DAY_OF_NEXT_MONTH` | Політика корекції дати 29-31 чисел у коротких місяцях. |
-| `medication_log_status_enum`| `TAKEN`<br>`SNOOZED`<br>`MISSED` | Статус прийому в журналі ліків. |
+Для забезпечення максимальної гнучкості, простоти розширення системи та уникнення важких блокуючих DDL-міграцій у PostgreSQL, усі доменні перелічення зберігаються в БД як `VARCHAR(length)` з параметрами SQLAlchemy `native_enum=False, create_constraint=False`. Сувора валідація, типізація та захист від некоректних значень повністю інкапсульовані на рівні Pydantic v2 та SQLAlchemy.
+
+| Доменний Enum | Дозволені значення | Довжина у БД | Опис призначення |
+| :--- | :--- | :---: | :--- |
+| `UserRole` | `SUPER_ADMIN`<br>`ADMIN`<br>`USER` | `VARCHAR(16)` | Роль користувача в системі для контролю доступу (RBAC). |
+| `ReminderType` | `ANNIVERSARY`<br>`OPEN_TASK`<br>`DEADLINE_TASK`<br>`SUBSCRIPTION`<br>`MEDICATION` | `VARCHAR(32)` | Дискримінатор типу доменного агрегату нагадування (STI). |
+| `ScheduleLogicType` | `DATE_WITH_MONTH_INTERVAL`<br>`DAILY_AT_TIMES`<br>`EXACT_DATETIME_DEADLINE`<br>`EXACT_DATE_DEADLINE`<br>`INTERVAL_DAYS`<br>`INTERVAL_HOURS` | `VARCHAR(32)` | 6 фундаментальних логік обчислення розкладу. |
+| `ReminderStatus` | `ACTIVE`<br>`TRIAL`<br>`COMPLETED`<br>`PAUSED`<br>`CANCELLED` | `VARCHAR(16)` | Життєвий цикл та статус активності нагадування. |
+| `Priority` | `LOW`<br>`MEDIUM`<br>`HIGH`<br>`CRITICAL` | `VARCHAR(16)` | Рівні терміновості та важливості задач. |
+| `ExchangeRateProvider` | `NBU`<br>`MONOBANK`<br>`PRIVATBANK` | `VARCHAR(32)` | Джерело / банківський постачальник курсів валют. |
+| `CurrencyCode` | `UAH`<br>`USD`<br>`EUR` | `VARCHAR(3)` | Підтримувані коди валют (ISO 4217) для підписок і курсів. |
+| `MedicationLogStatus` | `TAKEN`<br>`SNOOZED`<br>`MISSED` | `VARCHAR(16)` | Статус прийому препарату в журналі дотримання лікування. |
+| `EndOfMonthPolicy` | `LAST_DAY_OF_MONTH`<br>`FIRST_DAY_OF_NEXT_MONTH` | *JSONB* | Внутрішній параметр обробки крайових дат у конфігурації `schedule_config` JSONB (не потребує окремої колонки). |
 
 ---
 
@@ -178,7 +181,7 @@ erDiagram
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY` (UUID v7) | `018f4a22-38b4-7123-89ab-cdef01234567` | Унікальний сурогатний ідентифікатор користувача (UUID v7). Впорядкований за часом. |
 | `username` | `VARCHAR(255)` | `NOT NULL`, `UNIQUE` | `'alex_dev'` | Унікальний системний логін користувача. При реєстрації через Telegram копіює його `tg_username` (або `tg_id` у разі відсутності нікнейма в Telegram). Забезпечує майбутній вхід у веб-панель/API. |
-| `role` | `user_role_enum` | `NOT NULL`, `DEFAULT 'USER'` | `'USER'` | Рівень доступу: `SUPER_ADMIN`, `ADMIN`, `USER`. |
+| `role` | `VARCHAR(16)` | `NOT NULL`, `DEFAULT 'USER'` | `'USER'` | Рівень доступу: `SUPER_ADMIN`, `ADMIN`, `USER`. |
 | `password_hash` | `VARCHAR(255)` | `NULL` | `'$2b$12$e8x...hash'` | Хеш пароля для веб-панелі чи API. Для бот-користувачів — `NULL`. |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-01 10:00:00+00` | Дата та час реєстрації облікового запису (UTC). |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-01 10:00:00+00` | Дата та час останнього оновлення даних (UTC). |
@@ -220,7 +223,7 @@ erDiagram
 | `timezone` | `VARCHAR(64)` | `NOT NULL`, `DEFAULT 'Europe/Kyiv'` | `'Europe/Kyiv'` | IANA-ідентифікатор часового поясу користувача для розрахунку локального часу і тихих годин. |
 | `quiet_hours_start` | `TIME` | `NOT NULL`, `DEFAULT '23:00:00'` | `23:00:00` | Початок нічного періоду тиші в локальному часі користувача. |
 | `quiet_hours_end` | `TIME` | `NOT NULL`, `DEFAULT '08:00:00'` | `08:00:00` | Завершення тихих годин (під час тихих годин звичайні сповіщення надсилаються без звуку). |
-| `preferred_bank` | `exchange_rate_provider_enum` | `NOT NULL`, `DEFAULT 'MONOBANK'` | `'MONOBANK'` | Обраний банк для конвертації валютних підписок. Якщо оновлення банку старіше за 48 год — fallback на НБУ. |
+| `preferred_bank` | `VARCHAR(32)` | `NOT NULL`, `DEFAULT 'MONOBANK'` | `'MONOBANK'` | Обраний банк для конвертації валютних підписок. Якщо оновлення банку старіше за 48 год — fallback на НБУ. |
 | `auto_deadline_priority_escalation` | `BOOLEAN` | `NOT NULL`, `DEFAULT TRUE` | `TRUE` | **Автоматична ескалація пріоритету задач з дедлайном**. Якщо `TRUE`, і користувач не вказав пріоритет вручну, система динамічно підвищує пріоритет (`LOW` $\rightarrow$ `CRITICAL`) при наближенні дедлайну. |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-01 10:00:00+00` | Дата створення налаштувань (UTC). |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-02 08:00:00+00` | Дата оновлення налаштувань (UTC). |
@@ -238,11 +241,11 @@ erDiagram
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY` (UUID v7) | `018f4a25-88ff-7421-99ee-cdef01234570` | Унікальний ідентифікатор нагадування (UUID v7). Впорядкований за часом. |
 | `user_id` | `UUID` | `NOT NULL`, `REFERENCES users(id) ON DELETE CASCADE` | `018f4a22-38b4-7123-89ab-cdef01234567` | Власник нагадування. |
-| `reminder_type` | `reminder_type_enum` | `NOT NULL` | `'SUBSCRIPTION'` | Дискримінатор типу нагадування (`ANNIVERSARY`, `OPEN_TASK`, `DEADLINE_TASK`, `SUBSCRIPTION`, `MEDICATION`). |
-| `schedule_logic` | `schedule_logic_type_enum`| `NOT NULL` | `'DATE_WITH_MONTH_INTERVAL'` | Дискримінатор 1 з 6 логік планування розкладу. |
+| `reminder_type` | `VARCHAR(32)` | `NOT NULL` | `'SUBSCRIPTION'` | Дискримінатор типу нагадування (`ANNIVERSARY`, `OPEN_TASK`, `DEADLINE_TASK`, `SUBSCRIPTION`, `MEDICATION`). |
+| `schedule_logic` | `VARCHAR(32)` | `NOT NULL` | `'DATE_WITH_MONTH_INTERVAL'` | Дискримінатор 1 з 6 логік планування розкладу. |
 | `title` | `VARCHAR(255)` | `NOT NULL` | `'Spotify Family'` або `'Амоксиклав 500 мг (1 таб.)'` | Заголовок нагадування: назва підписки, ім'я іменинника, назва ліків із дозуванням або заголовок задачі. |
 | `description` | `TEXT` | `NULL` | `'Оплата з чорної картки Моно'` | Додаткові нотатки користувача (рахунок списання, примітки до задачі або інструкції до ліків). |
-| `status` | `reminder_status_enum` | `NOT NULL`, `DEFAULT 'ACTIVE'` | `'ACTIVE'` | Поточний статус: `ACTIVE`, `TRIAL`, `COMPLETED`, `PAUSED`, `CANCELLED`. |
+| `status` | `VARCHAR(16)` | `NOT NULL`, `DEFAULT 'ACTIVE'` | `'ACTIVE'` | Поточний статус: `ACTIVE`, `TRIAL`, `COMPLETED`, `PAUSED`, `CANCELLED`. |
 | `next_trigger_at` | `TIMESTAMPTZ` | `NOT NULL` | `2026-11-15 07:00:00+00` | **Ключове поле шедулера**. Точний найближчий момент відправки наступного повідомлення (UTC). |
 | `schedule_config` | `JSONB` | `NOT NULL` | `{"type": "month_interval", "day": 15, "interval_months": 1}` | Специфічні параметри розкладу для обраної `schedule_logic` (години прийому ліків, інтервали днів, день/місяць річниці та рік народження). |
 | `lead_times` | `JSONB` | `NOT NULL`, `DEFAULT '[]'::jsonb`| `["5d", "3d", "1d"]` | Каскад відносних зміщень завчасного сповіщення. |
@@ -256,8 +259,8 @@ erDiagram
 | Назва поля | Тип даних | Обмеження | Приклад | Пояснення призначення поля |
 | :--- | :--- | :--- | :--- | :--- |
 | `due_datetime` | `TIMESTAMPTZ` | `NULL` | `2026-11-20 18:00:00+00` | Чіткий дедлайн задачі. Для `OPEN_TASK` завжди `NULL`. |
-| `base_priority` | `priority_enum` | `NULL` | `'HIGH'` | Встановлений користувачем пріоритет. Якщо `NULL` — діє як `UNSET`. |
-| `calculated_priority` | `priority_enum` | `NULL` | `'CRITICAL'` | Поточний динамічний пріоритет, обчислений автоматично формулою залишку часу. |
+| `base_priority` | `VARCHAR(16)` | `NULL` | `'HIGH'` | Встановлений користувачем пріоритет. Якщо `NULL` — діє як `UNSET`. |
+| `calculated_priority` | `VARCHAR(16)` | `NULL` | `'CRITICAL'` | Поточний динамічний пріоритет, обчислений автоматично формулою залишку часу. |
 
 #### 4.4.3. Специфічні колонки для Підписок та Платежів (`SUBSCRIPTION`)
 
@@ -294,7 +297,7 @@ erDiagram
 | `reminder_id` | `UUID` | `NOT NULL`, `REFERENCES reminders(id) ON DELETE CASCADE` | `018f4a25-88ff-7421-99ee-cdef01234570` | Посилання на нагадування ліків. |
 | `scheduled_at` | `TIMESTAMPTZ` | `NOT NULL` | `2026-11-02 16:00:00+00` | Плановий час прийому за графіком (UTC). |
 | `recorded_at` | `TIMESTAMPTZ` | `NULL` | `2026-11-02 16:04:12+00` | Фактичний час натискання кнопки користувачем (UTC). |
-| `status` | `medication_log_status_enum`| `NOT NULL`, `DEFAULT 'MISSED'` | `'TAKEN'` | Результат: `'TAKEN'`, `'SNOOZED'`, `'MISSED'`. |
+| `status` | `VARCHAR(16)` | `NOT NULL`, `DEFAULT 'MISSED'` | `'TAKEN'` | Результат: `'TAKEN'`, `'SNOOZED'`, `'MISSED'`. |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-02 16:00:00+00` | Час створення запису журналу (UTC). |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-02 16:04:12+00` | Час оновлення запису (UTC). |
 | `deleted_at` | `TIMESTAMPTZ` | `NULL` | `NULL` | Soft delete мітка. |
@@ -314,7 +317,7 @@ erDiagram
 | Назва поля | Тип даних | Обмеження | Приклад | Пояснення призначення поля |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY` (UUID v7) | `018f4a29-aaaa-7999-b111-cdef01234572` | Первинний ключ знімку курсу (UUID v7). Завдяки v7 природно сортується за часом запису. |
-| `provider` | `exchange_rate_provider_enum` | `NOT NULL` | `'MONOBANK'` | Джерело курсу (`NBU`, `MONOBANK`, `PRIVATBANK`). |
+| `provider` | `VARCHAR(32)` | `NOT NULL` | `'MONOBANK'` | Джерело курсу (`NBU`, `MONOBANK`, `PRIVATBANK`). |
 | `base_currency` | `VARCHAR(3)` | `NOT NULL`, `DEFAULT 'UAH'` | `'UAH'` | Базова валюта (гривня `UAH`). |
 | `target_currency`| `VARCHAR(3)` | `NOT NULL` | `'USD'` | Код іноземної валюти (`USD`, `EUR`). |
 | `rate_buy` | `NUMERIC(10, 4)` | `NULL` | `41.2000` | Курс купівлі банком. Для НБУ дорівнює курсу продажу. |
@@ -514,67 +517,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
--- 3. Створення типів перелічень (ENUMs)
-CREATE TYPE user_role_enum AS ENUM (
-    'SUPER_ADMIN',
-    'ADMIN',
-    'USER'
-);
-
-CREATE TYPE reminder_type_enum AS ENUM (
-    'ANNIVERSARY',
-    'OPEN_TASK',
-    'DEADLINE_TASK',
-    'SUBSCRIPTION',
-    'MEDICATION'
-);
-
-CREATE TYPE schedule_logic_type_enum AS ENUM (
-    'DATE_WITH_MONTH_INTERVAL',
-    'DAILY_AT_TIMES',
-    'EXACT_DATETIME_DEADLINE',
-    'EXACT_DATE_DEADLINE',
-    'INTERVAL_DAYS',
-    'INTERVAL_HOURS'
-);
-
-CREATE TYPE reminder_status_enum AS ENUM (
-    'ACTIVE',
-    'TRIAL',
-    'COMPLETED',
-    'PAUSED',
-    'CANCELLED'
-);
-
-CREATE TYPE priority_enum AS ENUM (
-    'LOW',
-    'MEDIUM',
-    'HIGH',
-    'CRITICAL'
-);
-
-CREATE TYPE exchange_rate_provider_enum AS ENUM (
-    'NBU',
-    'MONOBANK',
-    'PRIVATBANK'
-);
-
-CREATE TYPE end_of_month_policy_enum AS ENUM (
-    'LAST_DAY_OF_MONTH',
-    'FIRST_DAY_OF_NEXT_MONTH'
-);
-
-CREATE TYPE medication_log_status_enum AS ENUM (
-    'TAKEN',
-    'SNOOZED',
-    'MISSED'
-);
-
--- 4. Таблиця USERS (Головні облікові записи)
+-- 3. Таблиця USERS (Головні облікові записи)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     username VARCHAR(255) NOT NULL UNIQUE,
-    role user_role_enum NOT NULL DEFAULT 'USER',
+    role VARCHAR(16) NOT NULL DEFAULT 'USER',
     password_hash VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -582,7 +529,7 @@ CREATE TABLE users (
     version INTEGER NOT NULL DEFAULT 1
 );
 
--- 5. Таблиця USER_TELEGRAM_ACCOUNTS (Прив'язка до Telegram, 1:1)
+-- 4. Таблиця USER_TELEGRAM_ACCOUNTS (Прив'язка до Telegram, 1:1)
 CREATE TABLE user_telegram_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -595,30 +542,30 @@ CREATE TABLE user_telegram_accounts (
     version INTEGER NOT NULL DEFAULT 1
 );
 
--- 6. Таблиця USER_SETTINGS (Індивідуальні налаштування, 1:1)
+-- 5. Таблиця USER_SETTINGS (Індивідуальні налаштування, 1:1)
 CREATE TABLE user_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     timezone VARCHAR(64) NOT NULL DEFAULT 'Europe/Kyiv',
     quiet_hours_start TIME NOT NULL DEFAULT '23:00:00',
     quiet_hours_end TIME NOT NULL DEFAULT '08:00:00',
-    preferred_bank exchange_rate_provider_enum NOT NULL DEFAULT 'MONOBANK',
+    preferred_bank VARCHAR(32) NOT NULL DEFAULT 'MONOBANK',
     auto_deadline_priority_escalation BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     version INTEGER NOT NULL DEFAULT 1
 );
 
--- 7. Таблиця REMINDERS (Single Table Inheritance)
+-- 6. Таблиця REMINDERS (Single Table Inheritance)
 CREATE TABLE reminders (
     -- Базові спільні поля
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    reminder_type reminder_type_enum NOT NULL,
-    schedule_logic schedule_logic_type_enum NOT NULL,
+    reminder_type VARCHAR(32) NOT NULL,
+    schedule_logic VARCHAR(32) NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    status reminder_status_enum NOT NULL DEFAULT 'ACTIVE',
+    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
     next_trigger_at TIMESTAMPTZ NOT NULL,
     schedule_config JSONB NOT NULL,
     lead_times JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -629,8 +576,8 @@ CREATE TABLE reminders (
 
     -- Специфічні поля: Задачі
     due_datetime TIMESTAMPTZ,
-    base_priority priority_enum,
-    calculated_priority priority_enum,
+    base_priority VARCHAR(16),
+    calculated_priority VARCHAR(16),
 
     -- Специфічні поля: Підписки (Фінанси, Тріали, Знижки)
     regular_amount NUMERIC(12, 2) CHECK (regular_amount >= 0),
@@ -656,13 +603,13 @@ WHERE status IN ('ACTIVE', 'TRIAL') AND deleted_at IS NULL;
 CREATE INDEX idx_reminders_user_type ON reminders (user_id, reminder_type) 
 WHERE deleted_at IS NULL;
 
--- 8. Таблиця MEDICATION_INTAKE_LOGS (Журнал прийому ліків)
+-- 7. Таблиця MEDICATION_INTAKE_LOGS (Журнал прийому ліків)
 CREATE TABLE medication_intake_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     reminder_id UUID NOT NULL REFERENCES reminders(id) ON DELETE CASCADE,
     scheduled_at TIMESTAMPTZ NOT NULL,
     recorded_at TIMESTAMPTZ,
-    status medication_log_status_enum NOT NULL DEFAULT 'MISSED',
+    status VARCHAR(16) NOT NULL DEFAULT 'MISSED',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
@@ -673,10 +620,10 @@ CREATE INDEX idx_medication_logs_reminder_scheduled
 ON medication_intake_logs (reminder_id, scheduled_at DESC) 
 WHERE deleted_at IS NULL;
 
--- 9. Таблиця EXCHANGE_RATES (Append-Only історія курсів валют)
+-- 8. Таблиця EXCHANGE_RATES (Append-Only історія курсів валют)
 CREATE TABLE exchange_rates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    provider exchange_rate_provider_enum NOT NULL,
+    provider VARCHAR(32) NOT NULL,
     base_currency VARCHAR(3) NOT NULL DEFAULT 'UAH',
     target_currency VARCHAR(3) NOT NULL,
     rate_buy NUMERIC(10, 4),

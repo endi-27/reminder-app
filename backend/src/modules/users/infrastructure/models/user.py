@@ -26,9 +26,10 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Vers
     role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,
-            name="user_role_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=16,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         default=UserRole.USER,
         server_default="USER",

@@ -24,8 +24,8 @@ class ExchangeRateMapper(BaseMapper[ExchangeRate, ExchangeRateModel]):
         return ExchangeRateModel(
             id=entity.id,
             provider=entity.provider,
-            base_currency=entity.base_currency.value,
-            target_currency=entity.target_currency.value,
+            base_currency=entity.base_currency,
+            target_currency=entity.target_currency,
             rate_buy=entity.rate_buy,
             rate_sell=entity.rate_sell,
             created_at=entity.created_at,

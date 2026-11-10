@@ -48,9 +48,10 @@ class MedicationIntakeLogModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDe
     status: Mapped[MedicationLogStatus] = mapped_column(
         Enum(
             MedicationLogStatus,
-            name="medication_log_status_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=16,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         default=MedicationLogStatus.MISSED,
         server_default="MISSED",

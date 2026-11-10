@@ -34,8 +34,8 @@ class FinanceQueryService(BaseQueryService):
             ExchangeRateResponseDTO(
                 id=model.id,
                 provider=ExchangeRateProvider(model.provider),
-                base_currency=model.base_currency,
-                target_currency=model.target_currency,
+                base_currency=model.base_currency.value,
+                target_currency=model.target_currency.value,
                 rate_buy=model.rate_buy,
                 rate_sell=model.rate_sell,
                 created_at=model.created_at,
@@ -59,7 +59,7 @@ class FinanceQueryService(BaseQueryService):
             .select_from(ExchangeRateModel)
             .where(
                 ExchangeRateModel.provider == provider,
-                ExchangeRateModel.target_currency == target_currency.value,
+                ExchangeRateModel.target_currency == target_currency,
             )
         )
         total = await self._session.scalar(count_stmt) or 0
@@ -68,7 +68,7 @@ class FinanceQueryService(BaseQueryService):
             select(ExchangeRateModel)
             .where(
                 ExchangeRateModel.provider == provider,
-                ExchangeRateModel.target_currency == target_currency.value,
+                ExchangeRateModel.target_currency == target_currency,
             )
             .order_by(desc(ExchangeRateModel.created_at))
             .offset(params.offset)
@@ -81,8 +81,8 @@ class FinanceQueryService(BaseQueryService):
             ExchangeRateResponseDTO(
                 id=model.id,
                 provider=ExchangeRateProvider(model.provider),
-                base_currency=model.base_currency,
-                target_currency=model.target_currency,
+                base_currency=model.base_currency.value,
+                target_currency=model.target_currency.value,
                 rate_buy=model.rate_buy,
                 rate_sell=model.rate_sell,
                 created_at=model.created_at,

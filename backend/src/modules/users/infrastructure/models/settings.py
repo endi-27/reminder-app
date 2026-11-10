@@ -49,9 +49,10 @@ class UserSettingsModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, VersionedMixi
     preferred_bank: Mapped[ExchangeRateProvider] = mapped_column(
         Enum(
             ExchangeRateProvider,
-            name="exchange_rate_provider_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=32,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         default=ExchangeRateProvider.MONOBANK,
         server_default="MONOBANK",

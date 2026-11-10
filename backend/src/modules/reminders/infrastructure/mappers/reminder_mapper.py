@@ -92,11 +92,7 @@ class ReminderMapper(BaseMapper[ReminderAggregate, ReminderModel]):
             )
 
         if model.reminder_type == ReminderType.SUBSCRIPTION:
-            currency_code = (
-                CurrencyCode(model.currency)
-                if model.currency is not None and model.currency in CurrencyCode._value2member_map_
-                else CurrencyCode.UAH
-            )
+            currency_code = model.currency or CurrencyCode.UAH
             reg_amount = (
                 Money(amount=model.regular_amount, currency=currency_code)
                 if model.regular_amount is not None
@@ -181,7 +177,7 @@ class ReminderMapper(BaseMapper[ReminderAggregate, ReminderModel]):
             model.calculated_priority = entity.calculated_priority
         elif isinstance(entity, SubscriptionReminder):
             model.regular_amount = entity.regular_amount.amount
-            model.currency = entity.regular_amount.currency.value
+            model.currency = entity.regular_amount.currency
             model.is_trial = entity.is_trial
             model.trial_end_date = entity.trial_end_date
             model.discount_amount = entity.discount_amount.amount if entity.discount_amount else None

@@ -1,10 +1,10 @@
 from decimal import Decimal
 
-from sqlalchemy import Enum, Index, Numeric, String, text
+from sqlalchemy import Enum, Index, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
-from src.modules.finance.domain.enums import ExchangeRateProvider
+from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
 
 
 class ExchangeRateModel(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
@@ -29,20 +29,33 @@ class ExchangeRateModel(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     provider: Mapped[ExchangeRateProvider] = mapped_column(
         Enum(
             ExchangeRateProvider,
-            name="exchange_rate_provider_enum",
+            native_enum=False,
+            create_constraint=False,
+            length=32,
             values_callable=lambda obj: [e.value for e in obj],
-            create_type=True,
         ),
         nullable=False,
     )
-    base_currency: Mapped[str] = mapped_column(
-        String(3),
-        default="UAH",
+    base_currency: Mapped[CurrencyCode] = mapped_column(
+        Enum(
+            CurrencyCode,
+            native_enum=False,
+            create_constraint=False,
+            length=3,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        default=CurrencyCode.UAH,
         server_default="UAH",
         nullable=False,
     )
-    target_currency: Mapped[str] = mapped_column(
-        String(3),
+    target_currency: Mapped[CurrencyCode] = mapped_column(
+        Enum(
+            CurrencyCode,
+            native_enum=False,
+            create_constraint=False,
+            length=3,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
         nullable=False,
     )
     rate_buy: Mapped[Decimal | None] = mapped_column(

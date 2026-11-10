@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
-from sqlalchemy import DateTime, Integer, MetaData, func
+from sqlalchemy import DateTime, Integer, MetaData, func, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 from uuid6 import uuid7
 
@@ -29,7 +29,11 @@ class UUIDPrimaryKeyMixin:
     у B-Tree індекси PostgreSQL без фрагментації дискових сторінок.
     """
 
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid7)
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        default=uuid7,
+        server_default=text("uuid_generate_v7()"),
+    )
 
 
 class VersionedMixin:
