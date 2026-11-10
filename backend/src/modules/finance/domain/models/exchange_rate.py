@@ -27,16 +27,3 @@ class ExchangeRate:
         ref_utc = ensure_utc_datetime(ref)
         created_utc = ensure_utc_datetime(self.created_at)
         return (ref_utc - created_utc) > timedelta(hours=max_age_hours)
-
-
-@dataclass(frozen=True, kw_only=True)
-class ConversionResult:
-    """Результат розрахунку конвертації валюти у гривню (UAH)."""
-
-    original_amount: Decimal
-    original_currency: CurrencyCode
-    amount_uah: Decimal
-    rate_used: Decimal
-    provider_used: ExchangeRateProvider
-    is_stale_fallback: bool = False
-    rate_created_at: datetime | None = None

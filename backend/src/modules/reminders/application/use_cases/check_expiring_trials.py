@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from src.core.protocols import INotificationPublisher, IUnitOfWork
 from src.infrastructure.notifications.dto import NotificationEventType, NotificationPayload
 from src.modules.reminders.domain.interfaces import IReminderRepository
+from src.modules.reminders.domain.value_objects import QuietHoursWindow
 from src.modules.users.public import UsersPublicGateway
 
 
@@ -44,12 +45,20 @@ class CheckExpiringTrialsAndDiscountsUseCase:
                 sub.convert_trial_to_paid(now_utc, user_timezone=ctx.timezone)
                 await self._reminder_repo.save(sub)
 
+                quiet_hours = QuietHoursWindow(
+                    start_time=ctx.quiet_hours_start,
+                    end_time=ctx.quiet_hours_end,
+                    timezone_name=ctx.timezone,
+                )
+                is_silent = quiet_hours.is_in_quiet_hours(now_utc)
+
                 payloads.append(
                     NotificationPayload(
                         event_type=NotificationEventType.TRIAL_EXPIRED,
                         recipient_channel="telegram",
                         recipient_chat_id=ctx.telegram_chat_id,
                         user_timezone=ctx.timezone,
+                        disable_sound=is_silent,
                         reminder_id=sub.id,
                         reminder_type=sub.reminder_type,
                         title=sub.title,

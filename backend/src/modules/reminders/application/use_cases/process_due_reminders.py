@@ -83,12 +83,7 @@ class ProcessDueRemindersUseCase:
             )
 
             is_strict = getattr(reminder, "strict_schedule", False)
-            if quiet_hours.is_in_quiet_hours(now_utc) and not is_strict:
-                reminder.next_trigger_at = quiet_hours.adjust_trigger_time(now_utc, strict_schedule=False)
-                reminder.mark_updated()
-                await self._reminder_repo.save(reminder)
-                deferred_to_quiet_hours += 1
-                continue
+            disable_sound = quiet_hours.should_disable_sound(now_utc, strict_schedule=is_strict)
 
             if isinstance(reminder, SubscriptionReminder):
                 active_money = reminder.active_amount
@@ -112,6 +107,7 @@ class ProcessDueRemindersUseCase:
                             recipient_channel="telegram",
                             recipient_chat_id=ctx.telegram_chat_id,
                             user_timezone=ctx.timezone,
+                            disable_sound=disable_sound,
                             reminder_id=reminder.id,
                             reminder_type=reminder.reminder_type,
                             title=reminder.title,
@@ -134,6 +130,7 @@ class ProcessDueRemindersUseCase:
                         recipient_channel="telegram",
                         recipient_chat_id=ctx.telegram_chat_id,
                         user_timezone=ctx.timezone,
+                        disable_sound=disable_sound,
                         reminder_id=reminder.id,
                         reminder_type=reminder.reminder_type,
                         title=reminder.title,
@@ -156,6 +153,7 @@ class ProcessDueRemindersUseCase:
                             recipient_channel="telegram",
                             recipient_chat_id=ctx.telegram_chat_id,
                             user_timezone=ctx.timezone,
+                            disable_sound=disable_sound,
                             reminder_id=reminder.id,
                             reminder_type=reminder.reminder_type,
                             title=reminder.title,
@@ -176,6 +174,7 @@ class ProcessDueRemindersUseCase:
                             recipient_channel="telegram",
                             recipient_chat_id=ctx.telegram_chat_id,
                             user_timezone=ctx.timezone,
+                            disable_sound=disable_sound,
                             reminder_id=reminder.id,
                             reminder_type=reminder.reminder_type,
                             title=reminder.title,
@@ -192,6 +191,7 @@ class ProcessDueRemindersUseCase:
                         recipient_channel="telegram",
                         recipient_chat_id=ctx.telegram_chat_id,
                         user_timezone=ctx.timezone,
+                        disable_sound=disable_sound,
                         reminder_id=reminder.id,
                         reminder_type=reminder.reminder_type,
                         title=reminder.title,

@@ -235,7 +235,7 @@ class TestMedicationAndTaskSchedules:
         kyiv_zone = ZoneInfo("Europe/Kyiv")
         assert next_strict.astimezone(kyiv_zone) == datetime(2026, 11, 8, 0, 0, tzinfo=kyiv_zone)
 
-        # 2. За strict_schedule == False нічний прийом переноситься на 08:05 ранку
+        # 2. За новою логікою тихих годин: розклад не зсувається (сповіщення надсилається без звуку)
         next_non_strict = ScheduleCalculator.calculate_next_trigger(
             reminder_type=ReminderType.MEDICATION,
             schedule_logic=ScheduleLogicType.INTERVAL_HOURS,
@@ -245,7 +245,7 @@ class TestMedicationAndTaskSchedules:
             quiet_hours=window,
             strict_schedule=False,
         )
-        assert next_non_strict.astimezone(kyiv_zone) == datetime(2026, 11, 8, 8, 5, tzinfo=kyiv_zone)
+        assert next_non_strict.astimezone(kyiv_zone) == datetime(2026, 11, 8, 0, 0, tzinfo=kyiv_zone)
 
     def test_deadline_task_overdue_morning_fallback(self) -> None:
         due = datetime(2026, 11, 5, 12, 0, tzinfo=UTC)

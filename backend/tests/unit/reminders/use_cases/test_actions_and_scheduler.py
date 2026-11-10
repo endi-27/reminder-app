@@ -15,8 +15,10 @@ from src.modules.reminders.application.dto import (
     UpdateReminderCommand,
 )
 from src.modules.reminders.application.use_cases import (
+    CheckExpiringTrialsAndDiscountsUseCase,
     HandleReminderActionUseCase,
     PatchReminderUseCase,
+    ProcessDailyDigestUseCase,
     ProcessDueRemindersUseCase,
     UpdateReminderUseCase,
 )
@@ -287,7 +289,7 @@ class TestProcessDueRemindersUseCase:
     """Тести щохвилинного шедулера ProcessDueRemindersUseCase."""
 
     @pytest.mark.asyncio
-    async def test_night_reminder_deferred_to_morning_during_quiet_hours(self) -> None:
+    async def test_night_reminder_sent_silently_during_quiet_hours(self) -> None:
         user_id = uuid7()
         reminder_id = uuid7()
         uow = FakeUnitOfWork()
@@ -333,12 +335,13 @@ class TestProcessDueRemindersUseCase:
 
         result = await use_case.execute(now=night_utc)
         assert result.processed_count == 1
-        assert result.deferred_to_quiet_hours == 1
-        assert result.notifications_queued == 0
-        assert publisher.count() == 0
+        assert result.deferred_to_quiet_hours == 0
+        assert result.notifications_queued == 1
+        assert publisher.count() == 1
+        assert publisher.published_payloads[0].disable_sound is True
 
-        # Час перенесено на 08:05 того ж ранку за Києвом
-        expected_kyiv = datetime(2026, 11, 7, 8, 5, tzinfo=kyiv_zone)
+        # Час просунуто на наступну добу о 02:00 за Києвом (без зсувів)
+        expected_kyiv = datetime(2026, 11, 8, 2, 0, tzinfo=kyiv_zone)
         expected_utc = expected_kyiv.astimezone(UTC)
         assert reminder.next_trigger_at == expected_utc
 
@@ -393,6 +396,7 @@ class TestProcessDueRemindersUseCase:
         assert result.deferred_to_quiet_hours == 0
         assert result.notifications_queued == 1
         assert publisher.count() == 1
+        assert publisher.published_payloads[0].disable_sound is False
         payload = publisher.published_payloads[0]
         assert payload.event_type == NotificationEventType.REMINDER_DUE
         assert payload.title == "Нічний інсулін"
@@ -452,3 +456,122 @@ class TestProcessDueRemindersUseCase:
         assert payload.converted_amount_uah == Decimal("830.00")
         assert payload.rate_provider == "MONOBANK"
         assert payload.is_stale_rate_fallback is False
+
+
+class TestDailyDigestAndTrialsQuietHours:
+    """Тестування беззвучного режиму під час тихих годин для дайджестів та тріалів."""
+
+    @pytest.mark.asyncio
+    async def test_daily_digest_silent_during_quiet_hours(self) -> None:
+        user_id = uuid7()
+        uow = FakeUnitOfWork()
+        repo = InMemoryReminderRepository()
+        publisher = FakeNotificationPublisher()
+
+        # 02:00 за Києвом (тихі години)
+        kyiv_zone = ZoneInfo("Europe/Kyiv")
+        night_time = datetime(2026, 11, 7, 2, 0, tzinfo=kyiv_zone).astimezone(UTC)
+        day_time = datetime(2026, 11, 7, 10, 0, tzinfo=kyiv_zone).astimezone(UTC)
+
+        gateway = FakeUsersGateway(
+            contexts={
+                user_id: UserNotificationContextDTO(
+                    user_id=user_id,
+                    telegram_chat_id=12345,
+                    timezone="Europe/Kyiv",
+                    quiet_hours_start=time(23, 0),
+                    quiet_hours_end=time(8, 0),
+                    preferred_bank=ExchangeRateProvider.MONOBANK,
+                    auto_deadline_priority_escalation=True,
+                )
+            }
+        )
+
+        task = OpenTaskReminder(
+            id=uuid7(),
+            user_id=user_id,
+            title="Перевірити пошту",
+            next_trigger_at=night_time,
+            schedule_config=DailyAtTimesConfig(times=[time(2, 0)]),
+        )
+        await repo.save(task)
+
+        digest_use_case = ProcessDailyDigestUseCase(
+            uow=uow,
+            reminder_repo=repo,
+            users_gateway=cast(UsersPublicGateway, gateway),
+            publisher=publisher,
+        )
+
+        # 1. Вночі під час тихих годин -> disable_sound is True
+        sent = await digest_use_case.execute(now=night_time)
+        assert sent == 1
+        assert publisher.published_payloads[0].disable_sound is True
+
+        # 2. Вдень поза тихими годинами -> disable_sound is False
+        publisher.clear()
+        task.next_trigger_at = day_time
+        await repo.save(task)
+
+        sent_day = await digest_use_case.execute(now=day_time)
+        assert sent_day == 1
+        assert publisher.published_payloads[0].disable_sound is False
+
+    @pytest.mark.asyncio
+    async def test_expiring_trials_silent_during_quiet_hours(self) -> None:
+        user_id = uuid7()
+        uow = FakeUnitOfWork()
+        repo = InMemoryReminderRepository()
+        publisher = FakeNotificationPublisher()
+
+        kyiv_zone = ZoneInfo("Europe/Kyiv")
+        night_time = datetime(2026, 11, 7, 2, 0, tzinfo=kyiv_zone).astimezone(UTC)
+        day_time = datetime(2026, 11, 7, 10, 0, tzinfo=kyiv_zone).astimezone(UTC)
+
+        gateway = FakeUsersGateway(
+            contexts={
+                user_id: UserNotificationContextDTO(
+                    user_id=user_id,
+                    telegram_chat_id=12345,
+                    timezone="Europe/Kyiv",
+                    quiet_hours_start=time(23, 0),
+                    quiet_hours_end=time(8, 0),
+                    preferred_bank=ExchangeRateProvider.MONOBANK,
+                    auto_deadline_priority_escalation=True,
+                )
+            }
+        )
+
+        sub = SubscriptionReminder(
+            id=uuid7(),
+            user_id=user_id,
+            title="Spotify Trial",
+            is_trial=True,
+            trial_end_date=date(2026, 11, 7),
+            next_trigger_at=night_time,
+            schedule_config=DateWithMonthIntervalConfig(day=7, interval_months=1),
+            regular_amount=Money(Decimal("4.99"), CurrencyCode.USD),
+        )
+        await repo.save(sub)
+
+        trial_use_case = CheckExpiringTrialsAndDiscountsUseCase(
+            uow=uow,
+            reminder_repo=repo,
+            users_gateway=cast(UsersPublicGateway, gateway),
+            publisher=publisher,
+        )
+
+        # 1. Вночі під час тихих годин -> disable_sound is True
+        sent = await trial_use_case.execute(now=night_time)
+        assert sent == 1
+        assert publisher.published_payloads[0].disable_sound is True
+
+        # 2. Вдень поза тихими годинами -> disable_sound is False
+        publisher.clear()
+        sub.is_trial = True
+        sub.trial_end_date = date(2026, 11, 7)
+        await repo.save(sub)
+
+        sent_day = await trial_use_case.execute(now=day_time)
+        assert sent_day == 1
+        assert publisher.published_payloads[0].disable_sound is False

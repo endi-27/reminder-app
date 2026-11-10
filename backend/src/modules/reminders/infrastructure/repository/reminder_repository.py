@@ -1,29 +1,18 @@
 from datetime import datetime
 from typing import cast
-from uuid import UUID
 
 from sqlalchemy import or_, select
 
 from src.infrastructure.db.repositories import SqlAlchemyBaseCrudRepository
 from src.modules.reminders.domain.aggregates import (
-    MedicationIntakeLog,
     OpenTaskReminder,
     ReminderAggregate,
     SubscriptionReminder,
 )
 from src.modules.reminders.domain.enums import ReminderStatus, ReminderType
-from src.modules.reminders.domain.interfaces import (
-    IMedicationLogRepository,
-    IReminderRepository,
-)
-from src.modules.reminders.infrastructure.mappers import (
-    MedicationIntakeLogMapper,
-    ReminderMapper,
-)
-from src.modules.reminders.infrastructure.models import (
-    MedicationIntakeLogModel,
-    ReminderModel,
-)
+from src.modules.reminders.domain.interfaces import IReminderRepository
+from src.modules.reminders.infrastructure.mappers import ReminderMapper
+from src.modules.reminders.infrastructure.models import ReminderModel
 
 
 class SqlAlchemyReminderRepository(
@@ -110,28 +99,3 @@ class SqlAlchemyReminderRepository(
         result = await self._session.execute(stmt)
         models = result.scalars().all()
         return [cast(SubscriptionReminder, self._to_domain(m)) for m in models]
-
-
-class SqlAlchemyMedicationLogRepository(
-    SqlAlchemyBaseCrudRepository[MedicationIntakeLog, MedicationIntakeLogModel],
-    IMedicationLogRepository,
-):
-    """Репозиторій для роботи з журналом прийому лікарських засобів medication_intake_logs."""
-
-    _model_cls = MedicationIntakeLogModel
-    _mapper = MedicationIntakeLogMapper
-
-    async def list_by_reminder_id(
-        self,
-        reminder_id: UUID,
-        *,
-        include_deleted: bool = False,
-    ) -> list[MedicationIntakeLog]:
-        """Повертає історію прийомів для зазначеного медичного нагадування у хронологічному порядку."""
-        stmt = select(MedicationIntakeLogModel).where(MedicationIntakeLogModel.reminder_id == reminder_id)
-        if not include_deleted:
-            stmt = stmt.where(MedicationIntakeLogModel.deleted_at.is_(None))
-        stmt = stmt.order_by(MedicationIntakeLogModel.scheduled_at.desc())
-        result = await self._session.execute(stmt)
-        models = result.scalars().all()
-        return [self._to_domain(m) for m in models]

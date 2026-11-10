@@ -13,6 +13,7 @@ from src.core import (
     setup_bot_logging,
     setup_logging,
 )
+from src.utils import configure_tzdata
 
 
 async def run_bot(
@@ -37,6 +38,8 @@ async def run_bot(
         setup_bot_logging()
     except Exception:
         setup_logging()
+
+    configure_tzdata()
 
     if bot is None:
         bot = create_bot()

@@ -369,8 +369,4 @@ class ScheduleCalculator:
             )
             raise InvalidScheduleConfigError(msg)
 
-        # Корекція на вікно тихих годин з урахуванням суворого розкладу
-        if quiet_hours is not None:
-            candidate_dt = quiet_hours.adjust_trigger_time(candidate_dt, strict_schedule=strict_schedule)
-
         return candidate_dt

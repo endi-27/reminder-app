@@ -388,8 +388,8 @@ def build_medication_strict_keyboard() -> InlineKeyboardMarkup:
     """Налаштування поведінки прийому ліків у нічні тихі години."""
     builder = InlineKeyboardBuilder()
     options = [
-        ("🌙 Переносити нічні прийоми на ранок (08:05)", "false"),
-        ("🚨 Суворий графік — будити навіть уночі!", "true"),
+        ("🌙 Без звуку вночі (тихий режим)", "false"),
+        ("🚨 Суворий графік — зі звуком навіть уночі!", "true"),
     ]
     for text, value in options:
         builder.button(text=text, callback_data=CreateWizardCallback(step="med_strict", value=value))

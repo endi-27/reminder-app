@@ -219,7 +219,7 @@ erDiagram
 | `user_id` | `UUID` | `NOT NULL`, `UNIQUE`, `REFERENCES users(id) ON DELETE CASCADE` | `018f4a22-38b4-7123-89ab-cdef01234567` | Зовнішній ключ 1:1 до таблиці `users`. |
 | `timezone` | `VARCHAR(64)` | `NOT NULL`, `DEFAULT 'Europe/Kyiv'` | `'Europe/Kyiv'` | IANA-ідентифікатор часового поясу користувача для розрахунку локального часу і тихих годин. |
 | `quiet_hours_start` | `TIME` | `NOT NULL`, `DEFAULT '23:00:00'` | `23:00:00` | Початок нічного періоду тиші в локальному часі користувача. |
-| `quiet_hours_end` | `TIME` | `NOT NULL`, `DEFAULT '08:00:00'` | `08:00:00` | Завершення тихих годин (звичайні нагадування переносяться на 08:05). |
+| `quiet_hours_end` | `TIME` | `NOT NULL`, `DEFAULT '08:00:00'` | `08:00:00` | Завершення тихих годин (під час тихих годин звичайні сповіщення надсилаються без звуку). |
 | `preferred_bank` | `exchange_rate_provider_enum` | `NOT NULL`, `DEFAULT 'MONOBANK'` | `'MONOBANK'` | Обраний банк для конвертації валютних підписок. Якщо оновлення банку старіше за 48 год — fallback на НБУ. |
 | `auto_deadline_priority_escalation` | `BOOLEAN` | `NOT NULL`, `DEFAULT TRUE` | `TRUE` | **Автоматична ескалація пріоритету задач з дедлайном**. Якщо `TRUE`, і користувач не вказав пріоритет вручну, система динамічно підвищує пріоритет (`LOW` $\rightarrow$ `CRITICAL`) при наближенні дедлайну. |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT NOW()` | `2026-11-01 10:00:00+00` | Дата створення налаштувань (UTC). |

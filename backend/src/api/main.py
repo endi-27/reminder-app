@@ -14,6 +14,7 @@ from src.core.events import setup_event_bus
 from src.core.logger import logger, setup_logging
 from src.core.redis import close_redis
 from src.modules.users import resolve_user_by_telegram_id
+from src.utils import configure_tzdata
 
 
 def setup_event_handlers() -> None:
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Керування життєвим циклом FastAPI додатку."""
     # Startup
     setup_logging()
+    configure_tzdata()
     logger.info("Ініціалізація бекенду reminder-app ({env})...", env=settings.environment)
     setup_event_handlers()
 

@@ -169,7 +169,12 @@ backend/src/modules/reminders/
 ├── domain/                          # 1. ЧИСТИЙ ДОМЕН (Жодних імпортів SQLAlchemy чи FastAPI)
 │   ├── __init__.py                  # Фасад домену (__all__)
 │   ├── enums.py                     # ReminderType, ScheduleLogicType, ReminderStatus, Priority, EndOfMonthPolicy
-│   ├── value_objects.py             # Money, LeadTimes, RecurrencePattern (6 схем розкладу)
+│   ├── value_objects/               # Value Objects розкладу та налаштувань
+│   │   ├── __init__.py              # Публічний фасад (__all__)
+│   │   ├── money.py                 # Money (точне квантування Decimal)
+│   │   ├── lead_times.py            # LeadTimes (каскад завчасних сповіщень)
+│   │   ├── quiet_hours.py           # QuietHoursWindow (вікно тихих годин)
+│   │   └── schedule_configs.py      # 6 конфігурацій розкладу, parse/serialize_schedule_config
 │   ├── aggregates/                  # 5 окремих агрегатів (успадковують AggregateRoot)
 │   │   ├── __init__.py
 │   │   ├── anniversary.py           # AnniversaryReminder
@@ -195,13 +200,24 @@ backend/src/modules/reminders/
 ├── queries/                         # 3. READ SIDE (Прагматичний CQRS — швидкі SELECT у DTO)
 │   ├── __init__.py
 │   ├── dto.py                       # ReminderListItemDTO, ReminderDetailDTO, AdherenceReportDTO
-│   └── query_service.py             # ReminderQueryService (фільтри за user_id, типом, статусом)
+│   └── query_service/               # Read-Side сервіс вибірок
+│       ├── __init__.py              # Фасад (__all__)
+│       └── reminder_query_service.py # ReminderQueryService (фільтри за user_id, типом, статусом)
 │
 ├── infrastructure/                  # 4. ІНФРАСТРУКТУРА ЗБЕРЕЖЕННЯ (STI Persistence)
 │   ├── __init__.py
-│   ├── models.py                    # ReminderModel (таблиця reminders), MedicationIntakeLogModel (lazy="raise")
-│   ├── mappers.py                   # Поліморфний ReminderMapper (ReminderModel <-> конкретний AggregateRoot)
-│   └── repository.py                # SqlAlchemyReminderRepository (зокрема SELECT ... FOR UPDATE SKIP LOCKED)
+│   ├── models/                      # ORM-моделі (lazy="raise", Single Table Inheritance)
+│   │   ├── __init__.py              # Реєстрація моделей у Base.metadata (__all__)
+│   │   ├── reminder.py              # ReminderModel (таблиця reminders)
+│   │   └── medication_log.py        # MedicationIntakeLogModel (таблиця medication_intake_logs)
+│   ├── mappers/                     # Поліморфні Data Mappers
+│   │   ├── __init__.py              # Фасад (__all__)
+│   │   ├── reminder_mapper.py       # ReminderMapper (ReminderModel <-> конкретний AggregateRoot)
+│   │   └── medication_log_mapper.py # MedicationIntakeLogMapper
+│   └── repository/                  # Репозиторії SQLAlchemy 2.0
+│       ├── __init__.py              # Фасад (__all__)
+│       ├── reminder_repository.py   # SqlAlchemyReminderRepository (SELECT ... FOR UPDATE SKIP LOCKED)
+│       └── medication_log_repository.py # SqlAlchemyMedicationLogRepository
 │
 ├── public.py                        # 5. ПУБЛІЧНИЙ ШЛЮЗ (RemindersPublicGateway з __all__)
 ├── dependencies.py                  # 6. DI провайдери модуля
@@ -218,7 +234,11 @@ backend/src/modules/users/
 ├── domain/
 │   ├── __init__.py
 │   ├── enums.py                     # UserRole (SUPER_ADMIN, ADMIN, USER)
-│   ├── models.py                    # User (AggregateRoot), UserTelegramAccount, UserSettings
+│   ├── models/                      # Доменні моделі та агрегати
+│   │   ├── __init__.py              # Фасад (__all__)
+│   │   ├── user.py                  # User (AggregateRoot)
+│   │   ├── settings.py              # UserSettings
+│   │   └── telegram_account.py      # UserTelegramAccount
 │   ├── exceptions.py
 │   └── interfaces.py                # IUserRepository (typing.Protocol)
 ├── application/
@@ -228,12 +248,22 @@ backend/src/modules/users/
 ├── queries/
 │   ├── __init__.py
 │   ├── dto.py                       # UserProfileDTO, UserSettingsDTO
-│   └── query_service.py             # UserQueryService
+│   └── query_service/               # Read-Side сервіс вибірок
+│       ├── __init__.py              # Фасад (__all__)
+│       └── user_query_service.py    # UserQueryService
 ├── infrastructure/
 │   ├── __init__.py
-│   ├── models.py                    # UserModel, UserTelegramAccountModel, UserSettingsModel (1:1, lazy="raise")
-│   ├── mappers.py                   # UserMapper
-│   └── repository.py                # SqlAlchemyUserRepository
+│   ├── models/                      # ORM-моделі (1:1, lazy="raise", versioned)
+│   │   ├── __init__.py              # Реєстрація моделей у Base.metadata (__all__)
+│   │   ├── user.py                  # UserModel
+│   │   ├── settings.py              # UserSettingsModel
+│   │   └── telegram_account.py      # UserTelegramAccountModel
+│   ├── mappers/                     # Data Mappers
+│   │   ├── __init__.py              # Фасад (__all__)
+│   │   └── user_mapper.py           # UserMapper
+│   └── repository/                  # Репозиторії SQLAlchemy 2.0
+│       ├── __init__.py              # Фасад (__all__)
+│       └── user_repository.py       # SqlAlchemyUserRepository
 ├── public.py                        # UsersPublicGateway (отримання налаштувань/таймзони для шедулера та бота)
 ├── dependencies.py
 └── router.py                        # HTTP РОУТЕР (/api/v1/users)
@@ -249,7 +279,10 @@ backend/src/modules/finance/
 ├── domain/
 │   ├── __init__.py
 │   ├── enums.py                     # ExchangeRateProvider (NBU, MONOBANK, PRIVATBANK)
-│   ├── models.py                    # ExchangeRate, ConversionResult (із прапорцем is_stale_fallback)
+│   ├── models/                      # Доменні моделі
+│   │   ├── __init__.py              # Фасад (__all__)
+│   │   ├── exchange_rate.py         # ExchangeRate (Append-Only Snapshot)
+│   │   └── conversion_result.py     # ConversionResult (із прапорцем is_stale_fallback)
 │   └── interfaces.py                # IExchangeRateRepository, IBankRateProviderClient
 ├── application/
 │   ├── __init__.py
@@ -260,12 +293,20 @@ backend/src/modules/finance/
 ├── queries/
 │   ├── __init__.py
 │   ├── dto.py                       # RateHistoryDTO, LatestRatesDTO
-│   └── query_service.py             # FinanceQueryService (історія курсів та поточні значення)
+│   └── query_service/               # Read-Side сервіс вибірок
+│       ├── __init__.py              # Фасад (__all__)
+│       └── finance_query_service.py # FinanceQueryService (історія курсів та поточні значення)
 ├── infrastructure/
 │   ├── __init__.py
-│   ├── models.py                    # ExchangeRateModel (Append-Only таблиця exchange_rates)
-│   ├── mappers.py
-│   ├── repository.py                # SqlAlchemyExchangeRateRepository
+│   ├── models/                      # ORM-моделі (Append-Only таблиця exchange_rates)
+│   │   ├── __init__.py              # Реєстрація моделей у Base.metadata (__all__)
+│   │   └── exchange_rate.py         # ExchangeRateModel
+│   ├── mappers/                     # Data Mappers
+│   │   ├── __init__.py              # Фасад (__all__)
+│   │   └── exchange_rate_mapper.py  # ExchangeRateMapper
+│   ├── repository/                  # Репозиторії SQLAlchemy 2.0
+│   │   ├── __init__.py              # Фасад (__all__)
+│   │   └── exchange_rate_repository.py # SqlAlchemyExchangeRateRepository
 │   └── clients/                     # HTTP-клієнти банків (httpx)
 │       ├── nbu_client.py            # Пріоритет 1 (Золотий стандарт)
 │       ├── monobank_client.py       # Картковий курс (із захистом від rate-limit 60s)
@@ -280,11 +321,11 @@ backend/src/modules/finance/
 ## 4. Чек-лист створення або розширення модуля
 
 1. Описати чисті доменні моделі, Value Objects та протоколи репозиторіїв у `domain/` (використовуючи `typing.Protocol`).
-2. Налаштувати ORM-моделі в `infrastructure/models.py` з використанням базових міксінів (`UUIDPrimaryKeyMixin`, `TimestampMixin`, `VersionedMixin`, за потреби `SoftDeleteMixin`) та обов'язковим `lazy="raise"` на всіх зв'язках.
-3. Реалізувати мапер (`infrastructure/mappers.py`) та репозиторій (`infrastructure/repository.py`).
+2. Налаштувати ORM-моделі в `infrastructure/models/` з використанням базових міксінів (`UUIDPrimaryKeyMixin`, `TimestampMixin`, `VersionedMixin`, за потреби `SoftDeleteMixin`) та обов'язковим `lazy="raise"` на всіх зв'язках.
+3. Реалізувати мапери (`infrastructure/mappers/`) та репозиторії (`infrastructure/repository/`).
 4. Створити Use Cases у `application/` (контроль транзакції `async with uow:` та `await uow.commit()` виключно на рівні Use Case).
 5. Описати Pydantic v2 DTO з використанням `typing.Annotated[T, Field(...)]`.
-6. Реалізувати `QueryService` у `queries/` для операцій читання (з фільтрацією `deleted_at IS NULL`).
+6. Реалізувати `QueryService` у `queries/query_service/` для операцій читання (з фільтрацією `deleted_at IS NULL`).
 7. Експортувати міжмодульний інтерфейс через `public.py` (`PublicGateway` зі списком `__all__`).
 8. Зареєструвати моделі в `backend/alembic/env.py` та створити міграцію.
 9. Написати швидкі юніт-тести в `backend/tests/unit/` та інтеграційні тести в `backend/tests/integration/`.

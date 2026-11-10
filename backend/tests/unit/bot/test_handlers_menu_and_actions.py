@@ -10,6 +10,8 @@ from aiogram.methods import AnswerCallbackQuery, EditMessageText, SendMessage
 from aiogram.types import CallbackQuery, Chat, ErrorEvent, Message, Update, User
 from uuid6 import uuid7
 
+import src.modules.finance.domain.enums
+import src.modules.users.domain.enums
 from src.api.schemas.pagination import PaginatedResponse
 from src.bot.callbacks.data import (
     ReminderActionCallback,
@@ -40,7 +42,6 @@ from src.bot.handlers.settings import (
 from src.bot.handlers.start import handle_cancel, handle_help, handle_start
 from src.bot.keyboards import BTN_CANCEL, BTN_MY_REMINDERS, BTN_RATES, BTN_SETTINGS
 from src.bot.states.settings_edit import SettingsEditStates
-from src.modules.finance.domain.enums import ExchangeRateProvider as FinanceRateProvider
 from src.modules.finance.queries.dto import ExchangeRateResponseDTO
 from src.modules.reminders.application.dto import ReminderActionCommand, ReminderActionType
 from src.modules.reminders.domain.enums import (
@@ -55,8 +56,7 @@ from src.modules.reminders.queries.dto import (
     ReminderResponseDTO,
 )
 from src.modules.users.application.dto import UpdateUserSettingsCommand
-from src.modules.users.domain.enums import ExchangeRateProvider as UserRateProvider
-from src.modules.users.domain.enums import UserRole
+from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
 from src.modules.users.queries.dto import (
     TelegramAccountResponseDTO,
     UserResponseDTO,
@@ -68,7 +68,7 @@ def _make_dummy_user(
     user_id: UUID | None = None,
     tg_id: int = 123456789,
     timezone: str = "Europe/Kyiv",
-    preferred_bank: UserRateProvider = UserRateProvider.MONOBANK,
+    preferred_bank: ExchangeRateProvider = ExchangeRateProvider.MONOBANK,
     escalate: bool = True,
     version: int = 1,
 ) -> UserResponseDTO:
@@ -245,7 +245,7 @@ async def test_handle_rates() -> None:
     dummy_rates = [
         ExchangeRateResponseDTO(
             id=uuid7(),
-            provider=FinanceRateProvider.MONOBANK,
+            provider=src.modules.finance.domain.enums.ExchangeRateProvider.MONOBANK,
             base_currency="UAH",
             target_currency="USD",
             rate_buy=Decimal("41.20"),
@@ -254,7 +254,7 @@ async def test_handle_rates() -> None:
         ),
         ExchangeRateResponseDTO(
             id=uuid7(),
-            provider=FinanceRateProvider.NBU,
+            provider=src.modules.finance.domain.enums.ExchangeRateProvider.NBU,
             base_currency="UAH",
             target_currency="USD",
             rate_buy=None,
@@ -345,7 +345,9 @@ async def test_handle_settings_callback_bank_update() -> None:
     api_client = AsyncMock(spec=BackendApiClient)
     api_client.get_user_settings.return_value = user.settings
 
-    updated_settings = user.settings.model_copy(update={"preferred_bank": UserRateProvider.PRIVATBANK, "version": 2})
+    updated_settings = user.settings.model_copy(
+        update={"preferred_bank": ExchangeRateProvider.PRIVATBANK, "version": 2}
+    )
     api_client.update_user_settings.return_value = updated_settings
     state = AsyncMock(spec=FSMContext)
 
@@ -354,7 +356,7 @@ async def test_handle_settings_callback_bank_update() -> None:
     api_client.update_user_settings.assert_awaited_once()
     cmd = api_client.update_user_settings.call_args[0][1]
     assert isinstance(cmd, UpdateUserSettingsCommand)
-    assert cmd.preferred_bank == UserRateProvider.PRIVATBANK
+    assert cmd.preferred_bank == ExchangeRateProvider.PRIVATBANK
     assert cmd.version == 1
 
     edited = _get_edited_messages(bot)

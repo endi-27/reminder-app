@@ -14,11 +14,13 @@ from src.tasks.functions import (
     cron_daily_task_digest,
     cron_sync_exchange_rates,
 )
+from src.utils import configure_tzdata
 
 
 async def startup(ctx: dict[str, Any]) -> None:
     """Хук запуску фонового воркера ARQ: ініціалізація логування та клієнтів."""
     setup_worker_logging()
+    configure_tzdata()
     ctx["redis"] = get_redis_client()
     logger.info(
         "[ARQ Worker] Воркер успішно запущено. Черга: {queue} | Максимум паралельних задач: {max_jobs}",

@@ -1,7 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import Enum as SAEnum
-from sqlalchemy import Index, Numeric, String, text
+from sqlalchemy import Enum, Index, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
@@ -28,7 +27,7 @@ class ExchangeRateModel(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     provider: Mapped[ExchangeRateProvider] = mapped_column(
-        SAEnum(
+        Enum(
             ExchangeRateProvider,
             name="exchange_rate_provider_enum",
             values_callable=lambda obj: [e.value for e in obj],

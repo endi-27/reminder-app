@@ -55,6 +55,7 @@ class ProcessDailyDigestUseCase:
                 end_time=ctx.quiet_hours_end,
                 timezone_name=ctx.timezone,
             )
+            is_silent = quiet_hours.is_in_quiet_hours(now_utc)
 
             payloads.append(
                 NotificationPayload(
@@ -62,6 +63,7 @@ class ProcessDailyDigestUseCase:
                     recipient_channel="telegram",
                     recipient_chat_id=ctx.telegram_chat_id,
                     user_timezone=ctx.timezone,
+                    disable_sound=is_silent,
                     digest_tasks=[
                         DigestTaskItemDTO(
                             reminder_id=t.id,

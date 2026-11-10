@@ -378,8 +378,8 @@ flowchart TD
 
 ### 7.4. Обробка тихих годин та винятків
 * Якщо настав час сповіщення, але в таймзоні користувача тривають Quiet Hours:
-  * За `strict_schedule == True` (ліки) $\rightarrow$ сповіщення надсилається негайно.
-  * За `strict_schedule == False` $\rightarrow$ час `next_trigger_at` автоматично переноситься на ранковий час закінчення тиші (`08:05`).
+  * За `strict_schedule == True` (критичні ліки) $\rightarrow$ сповіщення надсилається негайно зі звуком (обхід тихих годин).
+  * За `strict_schedule == False` $\rightarrow$ нагадування надсилається негайно за розкладом, але у беззвучному режимі (`disable_sound = True`, передається в Telegram як `disable_notification=True`). Час нагадування `next_trigger_at` не зсувається, що забезпечує стабільність, детермінізм та передбачуваність розкладу.
 
 ### 7.5. Асинхронний буфер доставки (Redis FIFO Queue)
 * Збагачене даними сповіщення (`NotificationPayload`) публікується в Redis (`LPUSH queue:notifications:telegram`).

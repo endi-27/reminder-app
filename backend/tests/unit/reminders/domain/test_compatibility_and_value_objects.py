@@ -1,7 +1,6 @@
 import itertools
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -147,32 +146,22 @@ class TestQuietHoursWindow:
         dt_morning_end = datetime(2026, 11, 8, 6, 0, tzinfo=UTC)
         assert window.is_in_quiet_hours(dt_morning_end) is False
 
-    def test_adjust_trigger_time_shifts_to_morning_for_normal_reminder(self) -> None:
+    def test_should_disable_sound_during_quiet_hours(self) -> None:
         window = QuietHoursWindow(
             start_time=time(23, 0),
             end_time=time(8, 0),
             timezone_name="Europe/Kyiv",
         )
-        # Нічний час: 03:00 за Києвом (01:00 UTC 8 листопада)
-        dt_night = datetime(2026, 11, 8, 1, 0, tzinfo=UTC)
+        dt_night = datetime(2026, 11, 8, 1, 0, tzinfo=UTC)  # 03:00 Kyiv
+        dt_day = datetime(2026, 11, 8, 12, 0, tzinfo=UTC)  # 14:00 Kyiv
 
-        # Для звичайного нагадування час має перенестися на 08:05 ранку за Києвом (06:05 UTC)
-        adjusted = window.adjust_trigger_time(dt_night, strict_schedule=False)
-        kyiv_zone = ZoneInfo("Europe/Kyiv")
-        assert adjusted.astimezone(kyiv_zone) == datetime(2026, 11, 8, 8, 5, tzinfo=kyiv_zone)
-
-    def test_adjust_trigger_time_ignores_shift_for_strict_schedule(self) -> None:
-        window = QuietHoursWindow(
-            start_time=time(23, 0),
-            end_time=time(8, 0),
-            timezone_name="Europe/Kyiv",
-        )
-        # Нічний прийом критичних ліків о 02:00 за Києвом
-        dt_night = datetime(2026, 11, 8, 0, 0, tzinfo=UTC)
-
-        # За strict_schedule == True час НЕ переноситься
-        adjusted = window.adjust_trigger_time(dt_night, strict_schedule=True)
-        assert adjusted == dt_night
+        # Вночі без strict_schedule -> звук вимкнено (тихий режим)
+        assert window.should_disable_sound(dt_night, strict_schedule=False) is True
+        # Вночі зі strict_schedule -> звук увімкнено (обхід тихих годин)
+        assert window.should_disable_sound(dt_night, strict_schedule=True) is False
+        # Вдень -> звук завжди увімкнено
+        assert window.should_disable_sound(dt_day, strict_schedule=False) is False
+        assert window.should_disable_sound(dt_day, strict_schedule=True) is False
 
 
 class TestEndOfMonthAndConfigParsing:

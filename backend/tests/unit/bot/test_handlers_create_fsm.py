@@ -234,7 +234,7 @@ async def test_handle_new_reminder_command() -> None:
     msg, bot = _create_mock_message("/new")
     state = MockFSMContext(initial_data={"foo": "bar"}, initial_state="some_state")
 
-    await handle_new_reminder(msg, state)  # type: ignore[arg-type]
+    await handle_new_reminder(msg, state)
 
     assert state.clear_called is True
     sent = _get_sent_messages(bot)
@@ -248,7 +248,7 @@ async def test_handle_new_reminder_button() -> None:
     msg, bot = _create_mock_message(BTN_CREATE_REMINDER)
     state = MockFSMContext()
 
-    await handle_new_reminder(msg, state)  # type: ignore[arg-type]
+    await handle_new_reminder(msg, state)
 
     sent = _get_sent_messages(bot)
     assert len(sent) == 1
@@ -274,7 +274,7 @@ async def test_handle_reminder_type_selection(
     cb_data = CreateReminderTypeCallback(reminder_type=reminder_type.value)
     state = MockFSMContext()
 
-    await handle_reminder_type_selection(cb, cb_data, state)  # type: ignore[arg-type]
+    await handle_reminder_type_selection(cb, cb_data, state)
 
     assert state.current_state == expected_state
     sent = _get_sent_messages(bot)
@@ -297,7 +297,7 @@ async def test_open_task_wizard_flow_via_callback() -> None:
     msg, bot = _create_mock_message("Купити корм коту")
     state = MockFSMContext()
 
-    await handle_open_task_title(msg, state)  # type: ignore[arg-type]
+    await handle_open_task_title(msg, state)
 
     assert state.data["title"] == "Купити корм коту"
     assert state.current_state == OpenTaskCreateStates.waiting_for_times
@@ -318,7 +318,7 @@ async def test_open_task_wizard_flow_via_callback() -> None:
     api_client = AsyncMock(spec=BackendApiClient)
     api_client.create_reminder.return_value = created_dto
 
-    await handle_open_task_times_callback(cb, cb_data, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_open_task_times_callback(cb, cb_data, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     call_args = api_client.create_reminder.await_args
@@ -351,7 +351,7 @@ async def test_open_task_wizard_flow_via_message() -> None:
     api_client = AsyncMock(spec=BackendApiClient)
     api_client.create_reminder.return_value = created_dto
 
-    await handle_open_task_times_message(msg, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_open_task_times_message(msg, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -364,7 +364,7 @@ async def test_open_task_invalid_title_and_times() -> None:
     # Занадто довга назва (> 255)
     msg, bot = _create_mock_message("A" * 260)
     state = MockFSMContext()
-    await handle_open_task_title(msg, state)  # type: ignore[arg-type]
+    await handle_open_task_title(msg, state)
     assert "від 1 до 255" in _get_sent_messages(bot)[0].text
     assert state.current_state is None
 
@@ -372,7 +372,7 @@ async def test_open_task_invalid_title_and_times() -> None:
     msg2, bot2 = _create_mock_message("invalid_time")
     state2 = MockFSMContext(initial_data={"title": "Test"})
     api_client = AsyncMock(spec=BackendApiClient)
-    await handle_open_task_times_message(msg2, state2, _make_dummy_user(), api_client)  # type: ignore[arg-type]
+    await handle_open_task_times_message(msg2, state2, _make_dummy_user(), api_client)
     assert "Некоректний формат годин" in _get_sent_messages(bot2)[0].text
     api_client.create_reminder.assert_not_called()
 
@@ -387,13 +387,13 @@ async def test_anniversary_wizard_flow() -> None:
     # 1. Назва
     msg1, bot1 = _create_mock_message("День народження мами")
     state = MockFSMContext()
-    await handle_anniversary_title(msg1, state)  # type: ignore[arg-type]
+    await handle_anniversary_title(msg1, state)
     assert state.data["title"] == "День народження мами"
     assert state.current_state == AnniversaryCreateStates.waiting_for_date
 
     # 2. Дата з роком народження
     msg2, bot2 = _create_mock_message("15.05.1975")
-    await handle_anniversary_date(msg2, state)  # type: ignore[arg-type]
+    await handle_anniversary_date(msg2, state)
     assert state.data["day"] == 15
     assert state.data["month"] == 5
     assert state.data["birth_year"] == 1975
@@ -411,7 +411,7 @@ async def test_anniversary_wizard_flow() -> None:
     api_client = AsyncMock(spec=BackendApiClient)
     api_client.create_reminder.return_value = created_dto
 
-    await handle_anniversary_leads_callback(cb, cb_data, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_anniversary_leads_callback(cb, cb_data, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -437,7 +437,7 @@ async def test_anniversary_manual_leads_message() -> None:
         title="Річниця весілля",
     )
 
-    await handle_anniversary_leads_message(msg, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_anniversary_leads_message(msg, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -451,13 +451,13 @@ async def test_anniversary_invalid_date_and_leads() -> None:
     state = MockFSMContext(initial_data={"title": "Річниця"})
     # Невалідна дата (31 лютого)
     msg, bot = _create_mock_message("31.02.2024")
-    await handle_anniversary_date(msg, state)  # type: ignore[arg-type]
+    await handle_anniversary_date(msg, state)
     assert "Некоректний формат дати" in _get_sent_messages(bot)[0].text
 
     # Невалідні інтервали
     msg2, bot2 = _create_mock_message("foo, bar")
     api_client = AsyncMock(spec=BackendApiClient)
-    await handle_anniversary_leads_message(msg2, state, _make_dummy_user(), api_client)  # type: ignore[arg-type]
+    await handle_anniversary_leads_message(msg2, state, _make_dummy_user(), api_client)
     assert "Некоректний формат завчасних" in _get_sent_messages(bot2)[0].text
     api_client.create_reminder.assert_not_called()
 
@@ -472,7 +472,7 @@ async def test_deadline_wizard_flow_quick_choice() -> None:
     # 1. Назва
     msg1, _ = _create_mock_message("Підготувати презентацію")
     state = MockFSMContext()
-    await handle_deadline_title(msg1, state)  # type: ignore[arg-type]
+    await handle_deadline_title(msg1, state)
     assert state.data["title"] == "Підготувати презентацію"
     assert state.current_state == DeadlineTaskCreateStates.waiting_for_deadline
 
@@ -481,7 +481,7 @@ async def test_deadline_wizard_flow_quick_choice() -> None:
     cb_data1 = CreateWizardCallback(step="dl_date", value="tomorrow_18")
     current_user = _make_dummy_user(timezone="Europe/Kyiv")
 
-    await handle_deadline_date_callback(cb1, cb_data1, state, current_user)  # type: ignore[arg-type]
+    await handle_deadline_date_callback(cb1, cb_data1, state, current_user)
 
     assert "due_datetime_iso" in state.data
     assert state.current_state == DeadlineTaskCreateStates.waiting_for_priority
@@ -498,7 +498,7 @@ async def test_deadline_wizard_flow_quick_choice() -> None:
     api_client = AsyncMock(spec=BackendApiClient)
     api_client.create_reminder.return_value = created_dto
 
-    await handle_deadline_priority_callback(cb2, cb_data2, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_deadline_priority_callback(cb2, cb_data2, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -519,7 +519,7 @@ async def test_deadline_wizard_custom_date_and_explicit_priority() -> None:
     state = MockFSMContext(initial_data={"title": "Здати диплом"})
     current_user = _make_dummy_user(timezone="Europe/Kyiv")
 
-    await handle_deadline_date_message(msg, state, current_user)  # type: ignore[arg-type]
+    await handle_deadline_date_message(msg, state, current_user)
 
     assert "due_datetime_iso" in state.data
     assert state.current_state == DeadlineTaskCreateStates.waiting_for_priority
@@ -534,7 +534,7 @@ async def test_deadline_wizard_custom_date_and_explicit_priority() -> None:
         title="Здати диплом",
     )
 
-    await handle_deadline_priority_callback(cb, cb_data, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_deadline_priority_callback(cb, cb_data, state, current_user, api_client)
 
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
     assert cmd.base_priority == Priority.CRITICAL
@@ -547,7 +547,7 @@ async def test_deadline_past_date_rejected() -> None:
     state = MockFSMContext(initial_data={"title": "Стара задача"})
     current_user = _make_dummy_user()
 
-    await handle_deadline_date_message(msg, state, current_user)  # type: ignore[arg-type]
+    await handle_deadline_date_message(msg, state, current_user)
 
     assert "повинні бути у майбутньому" in _get_sent_messages(bot)[0].text
     assert state.current_state is None
@@ -563,13 +563,13 @@ async def test_subscription_regular_flow() -> None:
     # 1. Назва
     msg1, _ = _create_mock_message("Netflix Premium")
     state = MockFSMContext()
-    await handle_subscription_title(msg1, state)  # type: ignore[arg-type]
+    await handle_subscription_title(msg1, state)
     assert state.data["title"] == "Netflix Premium"
     assert state.current_state == SubscriptionCreateStates.waiting_for_amount_currency
 
     # 2. Сума та валюта
     msg2, _ = _create_mock_message("9.99 USD")
-    await handle_subscription_amount_currency(msg2, state)  # type: ignore[arg-type]
+    await handle_subscription_amount_currency(msg2, state)
     assert state.data["regular_amount"] == "9.99"
     assert state.data["currency"] == "USD"
     assert state.current_state == SubscriptionCreateStates.waiting_for_billing_day
@@ -578,7 +578,7 @@ async def test_subscription_regular_flow() -> None:
     cb1, _ = _create_mock_callback("wiz#sub_bill#15_1")
     cb_data1 = CreateWizardCallback(step="sub_bill", value="15_1")
     current_user = _make_dummy_user()
-    await handle_subscription_billing_callback(cb1, cb_data1, state, current_user)  # type: ignore[arg-type]
+    await handle_subscription_billing_callback(cb1, cb_data1, state, current_user)
     assert state.data["billing_day"] == 15
     assert state.data["interval_months"] == 1
     assert state.current_state == SubscriptionCreateStates.waiting_for_mode
@@ -595,7 +595,7 @@ async def test_subscription_regular_flow() -> None:
         currency=CurrencyCode.USD,
     )
 
-    await handle_subscription_mode_callback(cb2, cb_data2, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_subscription_mode_callback(cb2, cb_data2, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -618,14 +618,14 @@ async def test_subscription_manual_billing_message() -> None:
     )
     # 1. Валідний день (25)
     msg1, _ = _create_mock_message("25")
-    await handle_subscription_billing_message(msg1, state)  # type: ignore[arg-type]
+    await handle_subscription_billing_message(msg1, state)
     assert state.data["billing_day"] == 25
     assert state.data["interval_months"] == 1
     assert state.current_state == SubscriptionCreateStates.waiting_for_mode
 
     # 2. Невалідний день (35)
     msg2, bot2 = _create_mock_message("35")
-    await handle_subscription_billing_message(msg2, state)  # type: ignore[arg-type]
+    await handle_subscription_billing_message(msg2, state)
     assert "Некоректний день місяця" in _get_sent_messages(bot2)[0].text
 
 
@@ -647,7 +647,7 @@ async def test_subscription_trial_flow() -> None:
     cb_data = CreateWizardCallback(step="sub_mode", value="trial")
     api_client = AsyncMock(spec=BackendApiClient)
 
-    await handle_subscription_mode_callback(cb, cb_data, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_subscription_mode_callback(cb, cb_data, state, current_user, api_client)
     assert state.current_state == SubscriptionCreateStates.waiting_for_trial_date
 
     # Введення дати тріалу в майбутньому
@@ -661,7 +661,7 @@ async def test_subscription_trial_flow() -> None:
         trial_end_date=future_date,
     )
 
-    await handle_subscription_trial_date(msg, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_subscription_trial_date(msg, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -687,7 +687,7 @@ async def test_subscription_discount_flow() -> None:
     cb, _ = _create_mock_callback("wiz#sub_mode#discount")
     cb_data = CreateWizardCallback(step="sub_mode", value="discount")
     api_client = AsyncMock(spec=BackendApiClient)
-    await handle_subscription_mode_callback(cb, cb_data, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_subscription_mode_callback(cb, cb_data, state, current_user, api_client)
     assert state.current_state == SubscriptionCreateStates.waiting_for_discount_details
 
     # Введення акційної ціни та кількості циклів (2.99 на 3 цикли)
@@ -698,7 +698,7 @@ async def test_subscription_discount_flow() -> None:
         title="Setapp",
     )
 
-    await handle_subscription_discount_details(msg, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_subscription_discount_details(msg, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -718,20 +718,20 @@ async def test_medication_daily_flow() -> None:
     # 1. Назва та доза
     msg1, _ = _create_mock_message("Амоксиклав 1000 мг")
     state = MockFSMContext()
-    await handle_medication_title(msg1, state)  # type: ignore[arg-type]
+    await handle_medication_title(msg1, state)
     assert state.data["title"] == "Амоксиклав 1000 мг"
     assert state.current_state == MedicationCreateStates.waiting_for_schedule_mode
 
     # 2. Вибір щоденного режиму
     cb1, _ = _create_mock_callback("wiz#med_mode#daily")
     cb_data1 = CreateWizardCallback(step="med_mode", value="daily")
-    await handle_medication_schedule_mode(cb1, cb_data1, state)  # type: ignore[arg-type]
+    await handle_medication_schedule_mode(cb1, cb_data1, state)
     assert state.data["med_mode"] == "daily"
     assert state.current_state == MedicationCreateStates.waiting_for_schedule_value
 
     # 3. Введення годин прийому
     msg2, _ = _create_mock_message("08:00, 14:00, 20:00")
-    await handle_medication_schedule_value(msg2, state)  # type: ignore[arg-type]
+    await handle_medication_schedule_value(msg2, state)
     assert state.data["schedule_logic"] == ScheduleLogicType.DAILY_AT_TIMES.value
     assert state.current_state == MedicationCreateStates.waiting_for_duration
 
@@ -739,7 +739,7 @@ async def test_medication_daily_flow() -> None:
     cb2, _ = _create_mock_callback("wiz#med_dur#7")
     cb_data2 = CreateWizardCallback(step="med_dur", value="7")
     current_user = _make_dummy_user()
-    await handle_medication_duration_callback(cb2, cb_data2, state, current_user)  # type: ignore[arg-type]
+    await handle_medication_duration_callback(cb2, cb_data2, state, current_user)
     assert state.data["course_duration_days"] == 7
     assert "start_date" in state.data
     assert "end_date" in state.data
@@ -757,7 +757,7 @@ async def test_medication_daily_flow() -> None:
         strict_schedule=True,
     )
 
-    await handle_medication_strict_callback(cb3, cb_data3, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_medication_strict_callback(cb3, cb_data3, state, current_user, api_client)
 
     api_client.create_reminder.assert_awaited_once()
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
@@ -780,12 +780,12 @@ async def test_medication_interval_flow_indefinite() -> None:
 
     # Інтервал кожні 12 годин
     msg1, _ = _create_mock_message("12")
-    await handle_medication_schedule_value(msg1, state)  # type: ignore[arg-type]
+    await handle_medication_schedule_value(msg1, state)
     assert state.data["schedule_logic"] == ScheduleLogicType.INTERVAL_HOURS.value
 
     # Тривалість 0 (безстроково) через повідомлення
     msg2, _ = _create_mock_message("0")
-    await handle_medication_duration_message(msg2, state, current_user)  # type: ignore[arg-type]
+    await handle_medication_duration_message(msg2, state, current_user)
     assert state.data["course_duration_days"] is None
     assert state.data["start_date"] is None
 
@@ -800,7 +800,7 @@ async def test_medication_interval_flow_indefinite() -> None:
         strict_schedule=False,
     )
 
-    await handle_medication_strict_callback(cb, cb_data, state, current_user, api_client)  # type: ignore[arg-type]
+    await handle_medication_strict_callback(cb, cb_data, state, current_user, api_client)
 
     cmd: CreateReminderCommand = api_client.create_reminder.await_args[0][1]
     assert cmd.schedule_logic == ScheduleLogicType.INTERVAL_HOURS
