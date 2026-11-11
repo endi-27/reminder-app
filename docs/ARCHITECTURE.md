@@ -439,8 +439,8 @@ FOR UPDATE SKIP LOCKED;
 * **`src/core/`** — чисте ядро системи (конфігурація `APP_CONFIG__`, `Loguru`, протоколи `IUnitOfWork`, базові класи домену `BaseEntity` та `AggregateRoot` із підтримкою UUIDv7, OCC `version` та `ensure_active()`).
 * **`src/infrastructure/`** — адаптери інфраструктури (`DeclarativeBase`, міксіни SQLAlchemy 2.0 з обов'язковим `lazy="raise"`, `SqlAlchemyUnitOfWork`, базові репозиторії та `RedisQueuePublisher`).
 * **`src/modules/`** — ізольовані бізнес-модулі (`users`, `reminders`, `finance`), побудовані за принципом прагматичного CQRS:
-  * **Write Side (`domain/` + `application/` + `infrastructure/`)**: багаті доменні агрегати, Use Cases, контроль транзакцій через `IUnitOfWork`.
-  * **Read Side (`queries/`)**: оптимізовані `QueryService` для швидких `SELECT` напряму в Pydantic v2 DTO.
+  * **Write Side (`domain/` + `application/` + `infrastructure/`)**: багаті доменні агрегати, Use Cases, контроль транзакцій через `IUnitOfWork`. Всі вхідні моделі команд та параметри зміни стану суворо іменуються із суфіксом `*Command` (наприклад, `CreateUserCommand`, `UpdateUserSettingsCommand`, `CreateReminderCommand`).
+  * **Read Side (`queries/`)**: оптимізовані `QueryService` для швидких `SELECT` напряму в Pydantic v2 DTO. Всі вихідні проекції та моделі відповідей суворо іменуються із суфіксом `*DTO` (наприклад, `UserResponseDTO`, `UserSettingsResponseDTO`, `ReminderResponseDTO`).
   * **Міжмодульна взаємодія (`public.py`)**: суворо через контракти `PublicGateway` зі списком `__all__` (прямий імпорт внутрішніх моделей між модулями у Write-пайплайні заборонений).
 * **`src/api/`** — презентаційний HTTP шар FastAPI (`main.py` точка входу та фабрика `create_app()`, роутери `/api/v1`, DI-провайдери, глобальні обробники винятків).
 * **`src/tasks/`** — фоновий воркер та Cron-шедулер ARQ (`worker.py` з `WorkerSettings` та прямим запуском `run_worker`).

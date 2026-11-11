@@ -100,6 +100,19 @@ class ApiSettings(BaseModel):
     ]
 
 
+class RateLimitSettings(BaseModel):
+    """Конфігурація обмеження частоти HTTP-запитів (Rate Limiting)."""
+
+    enabled: Annotated[bool, Field(description="Глобальний прапорець активності рейт-лімітера")] = True
+    default_limit: Annotated[str, Field(description="Глобальний ліміт частоти запитів за замовчуванням")] = "200/minute"
+    auth_login_limit: Annotated[str, Field(description="Ліміт спроб входу за логіном")] = "5/minute"
+    password_change_limit: Annotated[str, Field(description="Ліміт спроб зміни пароля")] = "5/minute"
+    password_admin_limit: Annotated[str, Field(description="Ліміт адмінського встановлення пароля")] = "10/minute"
+    user_create_limit: Annotated[str, Field(description="Ліміт створення користувачів")] = "20/minute"
+    reminder_write_limit: Annotated[str, Field(description="Ліміт створення та оновлення нагадувань")] = "30/minute"
+    bank_sync_limit: Annotated[str, Field(description="Ліміт ручної синхронізації курсів валют з банками")] = "5/minute"
+
+
 class ArqSettings(BaseModel):
     """Конфігурація фонового планувальника задач ARQ."""
 
@@ -231,6 +244,10 @@ class Settings(BaseSettings):
         ApiSettings,
         Field(description="Конфігурація HTTP API"),
     ] = ApiSettings()
+    rate_limit: Annotated[
+        RateLimitSettings,
+        Field(description="Конфігурація обмеження частоти HTTP-запитів"),
+    ] = RateLimitSettings()
     arq: Annotated[
         ArqSettings,
         Field(description="Конфігурація фонового планувальника ARQ"),

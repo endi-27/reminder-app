@@ -291,6 +291,12 @@ def test_bcrypt_password_hasher_success() -> None:
     assert hasher.verify(plain_password, "invalid_hash_string") is False
 
 
+def test_bcrypt_password_hasher_dummy_verify() -> None:
+    hasher = BcryptPasswordHasher(default_rounds=4)
+    # Фіктивна перевірка повертає False та не викликає виключень
+    assert hasher.dummy_verify("any_guessed_password") is False
+
+
 # ==============================================================================
 # Тести безпеки, токенів та CurrentUser
 # ==============================================================================

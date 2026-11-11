@@ -44,6 +44,25 @@ class TelegramAccountResponseDTO(BaseModel):
     version: Annotated[int, Field(description="Версія запису для оптимістичного блокування OCC")]
 
 
+class TelegramAccountDetailDTO(BaseModel):
+    """DTO детального перегляду Telegram-акаунта (включаючи user_id) для адміністраторів."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: Annotated[UUID, Field(description="Унікальний ідентифікатор профілю Telegram")]
+    user_id: Annotated[
+        UUID | None,
+        Field(default=None, description="Ідентифікатор прив'язаного користувача або None"),
+    ] = None
+    telegram_id: Annotated[int, Field(description="Числовий Telegram ID користувача")]
+    telegram_chat_id: Annotated[int, Field(description="Ідентифікатор чату для надсилання сповіщень")]
+    tg_username: Annotated[str | None, Field(default=None, description="Нікнейм у Telegram")] = None
+    tg_full_name: Annotated[str | None, Field(default=None, description="Повне ім'я в Telegram")] = None
+    version: Annotated[int, Field(description="Версія запису для оптимістичного блокування OCC")]
+    created_at: Annotated[datetime, Field(description="Часова мітка створення (UTC)")]
+    updated_at: Annotated[datetime, Field(description="Часова мітка останнього оновлення (UTC)")]
+
+
 class UserResponseDTO(BaseModel):
     """DTO вихідних даних профілю користувача з налаштуваннями та Telegram-даними."""
 
@@ -71,6 +90,10 @@ class UserNotificationContextDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: Annotated[UUID, Field(description="UUIDv7 користувача")]
+    is_active: Annotated[
+        bool,
+        Field(default=True, description="Ознака активності акаунта (True якщо deleted_at IS NULL)"),
+    ] = True
     telegram_chat_id: Annotated[
         int | None,
         Field(default=None, description="Ідентифікатор чату Telegram для доставки сповіщень"),

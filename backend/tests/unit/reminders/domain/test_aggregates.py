@@ -101,13 +101,15 @@ class TestTaskAggregates:
 
         _assert_status(task, ReminderStatus.ACTIVE)
 
-        # Пауза та відновлення
+        # Пауза та відновлення з перерахунком розкладу
         task.pause()
         _assert_status(task, ReminderStatus.PAUSED)
 
-        # Спроба повторно призупинити викликає помилку
-        task.resume()
+        ref_time = datetime(2026, 11, 15, 8, 0, tzinfo=UTC)
+        new_trigger = task.resume(reference_time=ref_time, user_timezone="Europe/Kyiv")
         _assert_status(task, ReminderStatus.ACTIVE)
+        assert task.next_trigger_at == new_trigger
+        assert task.next_trigger_at > ref_time
 
         # Спроба відновити активну задачу
         with pytest.raises(InvalidReminderStateTransitionError):

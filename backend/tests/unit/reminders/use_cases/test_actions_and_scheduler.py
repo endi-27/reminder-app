@@ -95,7 +95,9 @@ class TestUpdateAndPatchReminderUseCase:
             version=1,
         )
 
-        updated = await use_case.execute(reminder_id=reminder_id, user_id=user_id, cmd=cmd)
+        await use_case.execute(reminder_id=reminder_id, user_id=user_id, cmd=cmd)
+        updated = await repo.get_by_id(reminder_id)
+        assert updated is not None
         assert updated.title == "Нова оновлена назва"
         assert updated.description == "Оновлений опис"
         assert uow.committed is True
@@ -177,7 +179,9 @@ class TestUpdateAndPatchReminderUseCase:
             version=1,
         )
 
-        patched = await use_case.execute(reminder_id=reminder_id, user_id=user_id, cmd=cmd)
+        await use_case.execute(reminder_id=reminder_id, user_id=user_id, cmd=cmd)
+        patched = await repo.get_by_id(reminder_id)
+        assert patched is not None
         assert patched.title == "Змінено тільки заголовок"
         assert uow.committed is True
 
@@ -227,7 +231,8 @@ class TestHandleReminderActionUseCase:
         )
 
         cmd = ReminderActionCommand(action=ReminderActionType.RECORD_PAYMENT)
-        result = await use_case.execute(reminder_id=reminder_id, user_id=user_id, cmd=cmd)
+        await use_case.execute(reminder_id=reminder_id, user_id=user_id, cmd=cmd)
+        result = await repo.get_by_id(reminder_id)
 
         assert isinstance(result, SubscriptionReminder)
         assert result.discount_cycles_remaining == 1
@@ -575,3 +580,64 @@ class TestDailyDigestAndTrialsQuietHours:
         sent_day = await trial_use_case.execute(now=day_time)
         assert sent_day == 1
         assert publisher.published_payloads[0].disable_sound is False
+
+    @pytest.mark.asyncio
+    async def test_scheduler_advances_schedule_for_soft_deleted_user_without_notifications(self) -> None:
+        """
+        Тест вимоги Сценарію 15:
+        Для деактивованого користувача (is_active = False) розклад нагадування
+        просувається вперед, але жодне сповіщення в чергу не надсилається.
+        """
+        user_id = uuid7()
+        uow = FakeUnitOfWork()
+        repo = InMemoryReminderRepository()
+        publisher = FakeNotificationPublisher()
+        finance = FakeFinanceGateway()
+
+        now_utc = datetime(2026, 11, 7, 10, 0, tzinfo=UTC)
+
+        gateway = FakeUsersGateway(
+            contexts={
+                user_id: UserNotificationContextDTO(
+                    user_id=user_id,
+                    is_active=False,  # Користувач деактивований (Soft Delete)
+                    telegram_chat_id=12345,
+                    timezone="Europe/Kyiv",
+                    quiet_hours_start=time(23, 0),
+                    quiet_hours_end=time(8, 0),
+                    preferred_bank=ExchangeRateProvider.MONOBANK,
+                    auto_deadline_priority_escalation=True,
+                )
+            }
+        )
+
+        sub = SubscriptionReminder(
+            id=uuid7(),
+            user_id=user_id,
+            title="Netflix",
+            next_trigger_at=now_utc,
+            schedule_config=DateWithMonthIntervalConfig(day=7, interval_months=1),
+            regular_amount=Money(Decimal("9.99"), CurrencyCode.USD),
+        )
+        await repo.save(sub)
+
+        use_case = ProcessDueRemindersUseCase(
+            uow=uow,
+            reminder_repo=repo,
+            users_gateway=cast(UsersPublicGateway, gateway),
+            finance_gateway=finance,
+            publisher=publisher,
+        )
+
+        result = await use_case.execute(now=now_utc)
+
+        # 1. Нагадування оброблено, але в чергу не поставлено (0 notifications)
+        assert result.processed_count == 1
+        assert result.notifications_queued == 0
+        assert len(publisher.published_payloads) == 0
+
+        # 2. Розклад просунувся вперед на наступний місяць (грудень)
+        updated_sub = await repo.get_by_id(sub.id)
+        assert updated_sub is not None
+        assert updated_sub.next_trigger_at > now_utc
+        assert updated_sub.next_trigger_at.month == 12

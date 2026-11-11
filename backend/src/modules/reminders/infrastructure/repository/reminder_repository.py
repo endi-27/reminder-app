@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import cast
+from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 
 from src.infrastructure.db.repositories import SqlAlchemyBaseCrudRepository
 from src.modules.reminders.domain.aggregates import (
@@ -99,3 +100,44 @@ class SqlAlchemyReminderRepository(
         result = await self._session.execute(stmt)
         models = result.scalars().all()
         return [cast(SubscriptionReminder, self._to_domain(m)) for m in models]
+
+    async def pause_active_deadline_tasks_by_user_id(self, user_id: UUID) -> int:
+        """Переводить усі активні задачі з дедлайном у статус PAUSED для вказаного користувача."""
+        stmt = (
+            update(ReminderModel)
+            .where(
+                ReminderModel.user_id == user_id,
+                ReminderModel.reminder_type == ReminderType.DEADLINE_TASK,
+                ReminderModel.status == ReminderStatus.ACTIVE,
+                ReminderModel.deleted_at.is_(None),
+            )
+            .values(
+                status=ReminderStatus.PAUSED,
+                updated_at=datetime.now(UTC),
+                version=ReminderModel.version + 1,
+            )
+        )
+        result = await self._session.execute(stmt)
+        await self._session.flush()
+        rowcount = getattr(result, "rowcount", 0)
+        return int(rowcount or 0)
+
+    async def pause_all_active_reminders_by_user_id(self, user_id: UUID) -> int:
+        """Переводить усі активні та тріальні нагадування будь-якого типу у статус PAUSED для вказаного користувача."""
+        stmt = (
+            update(ReminderModel)
+            .where(
+                ReminderModel.user_id == user_id,
+                ReminderModel.status.in_([ReminderStatus.ACTIVE, ReminderStatus.TRIAL]),
+                ReminderModel.deleted_at.is_(None),
+            )
+            .values(
+                status=ReminderStatus.PAUSED,
+                updated_at=datetime.now(UTC),
+                version=ReminderModel.version + 1,
+            )
+        )
+        result = await self._session.execute(stmt)
+        await self._session.flush()
+        rowcount = getattr(result, "rowcount", 0)
+        return int(rowcount or 0)

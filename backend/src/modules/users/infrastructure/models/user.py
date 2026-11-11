@@ -37,13 +37,14 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Vers
     )
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    # Зв'язки 1:1 із забороною неявного I/O (lazy="raise")
+    # Зв'язки 1:1 із забороною неявного I/O (lazy="raise") та підтримкою DB ON DELETE CASCADE
     telegram_account: Mapped["UserTelegramAccountModel | None"] = relationship(
         "UserTelegramAccountModel",
         back_populates="user",
         uselist=False,
         lazy="raise",
-        cascade="all, delete-orphan",
+        cascade="save-update, merge",
+        passive_deletes=True,
     )
     settings: Mapped["UserSettingsModel | None"] = relationship(
         "UserSettingsModel",
@@ -51,4 +52,5 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Vers
         uselist=False,
         lazy="raise",
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )

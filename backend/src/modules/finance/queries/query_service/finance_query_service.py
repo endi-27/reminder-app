@@ -12,6 +12,18 @@ from src.modules.finance.queries.dto import ExchangeRateResponseDTO
 class FinanceQueryService(BaseQueryService):
     """CQRS Read-Side сервіс вибірок даних курсів валют без мутації стану сховища."""
 
+    def _map_exchange_rate(self, model: ExchangeRateModel) -> ExchangeRateResponseDTO:
+        """Трансформація ORM-моделі курсу валют у вихідний DTO."""
+        return ExchangeRateResponseDTO(
+            id=model.id,
+            provider=ExchangeRateProvider(model.provider),
+            base_currency=model.base_currency.value,
+            target_currency=model.target_currency.value,
+            rate_buy=model.rate_buy,
+            rate_sell=model.rate_sell,
+            created_at=model.created_at,
+        )
+
     async def get_latest_rates(self) -> list[ExchangeRateResponseDTO]:
         """
         Повертає найсвіжіші котирування для всіх доступних пар (провайдер, цільова валюта).
@@ -31,18 +43,7 @@ class FinanceQueryService(BaseQueryService):
         result = await self._session.execute(stmt)
         models = result.scalars().all()
 
-        return [
-            ExchangeRateResponseDTO(
-                id=model.id,
-                provider=ExchangeRateProvider(model.provider),
-                base_currency=model.base_currency.value,
-                target_currency=model.target_currency.value,
-                rate_buy=model.rate_buy,
-                rate_sell=model.rate_sell,
-                created_at=model.created_at,
-            )
-            for model in models
-        ]
+        return [self._map_exchange_rate(model) for model in models]
 
     async def get_rate_history(
         self,
@@ -78,17 +79,6 @@ class FinanceQueryService(BaseQueryService):
         result = await self._session.execute(stmt)
         models = result.scalars().all()
 
-        items = [
-            ExchangeRateResponseDTO(
-                id=model.id,
-                provider=ExchangeRateProvider(model.provider),
-                base_currency=model.base_currency.value,
-                target_currency=model.target_currency.value,
-                rate_buy=model.rate_buy,
-                rate_sell=model.rate_sell,
-                created_at=model.created_at,
-            )
-            for model in models
-        ]
+        items = [self._map_exchange_rate(model) for model in models]
 
         return PaginatedResponse.create(items=items, total=total, params=params)

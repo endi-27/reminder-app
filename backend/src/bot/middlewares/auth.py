@@ -37,9 +37,12 @@ class BotAuthMiddleware(BaseMiddleware):
 
         chat_id: int = from_user.id
         if isinstance(event, Message):
-            chat_id = event.chat.id
+            if event.chat.type == "private":
+                chat_id = event.chat.id
         elif isinstance(event, CallbackQuery) and event.message is not None:
-            chat_id = event.message.chat.id
+            chat = getattr(event.message, "chat", None)
+            if chat is not None and getattr(chat, "type", None) == "private":
+                chat_id = chat.id
 
         cmd = RegisterTelegramUserCommand(
             telegram_id=from_user.id,

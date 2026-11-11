@@ -3,7 +3,9 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.middleware import SlowAPIMiddleware
 from uuid6 import uuid7
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from src.core.config import settings
 from src.core.context import (
@@ -11,6 +13,7 @@ from src.core.context import (
     set_current_user_id,
     set_current_username,
 )
+from src.core.limiter import limiter
 from src.core.logger import logger
 
 
@@ -89,3 +92,10 @@ def setup_middlewares(app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Прив'язка SlowAPI Limiter до стану додатку
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
+
+    # ProxyHeadersMiddleware для коректного визначення IP клієнта за Nginx зворотним проксі
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")

@@ -7,13 +7,18 @@ from uuid6 import uuid7
 
 from src.api.main import app
 from src.core.domain.enums import SystemRole
+from src.core.exceptions import ForbiddenException
 from src.core.security import create_access_token
 from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.application.dto import (
     RegisterTelegramUserCommand,
 )
 from src.modules.users.domain.models import User
-from src.modules.users.public import UsersPublicGateway, resolve_user_by_telegram_id
+from src.modules.users.public import (
+    UsersPublicGateway,
+    resolve_user_by_id,
+    resolve_user_by_telegram_id,
+)
 from src.modules.users.queries.dto import (
     UserResponseDTO,
     UserSettingsResponseDTO,
@@ -117,9 +122,81 @@ async def test_resolve_user_by_telegram_id_found_and_not_found() -> None:
     with pytest.MonkeyPatch.context() as mp:
         mock_qs = MagicMock()
         mock_qs.get_by_telegram_id = AsyncMock(return_value=None)
+        mock_qs.is_telegram_user_deleted = AsyncMock(return_value=False)
         mp.setattr("src.modules.users.public.UserQueryService", lambda s: mock_qs)
 
         resolved = await resolve_user_by_telegram_id(99999, mock_session)
+        assert resolved is None
+
+    # 3. Користувача деактивовано (Soft Delete) -> ForbiddenException
+    with pytest.MonkeyPatch.context() as mp:
+        mock_qs = MagicMock()
+        mock_qs.is_telegram_user_deleted = AsyncMock(return_value=True)
+        mp.setattr("src.modules.users.public.UserQueryService", lambda s: mock_qs)
+
+        with pytest.raises(ForbiddenException) as exc_info:
+            await resolve_user_by_telegram_id(12345, mock_session)
+        assert "деактивовано" in exc_info.value.message
+
+
+@pytest.mark.asyncio
+async def test_resolve_user_by_id_scenarios() -> None:
+    """Тест резолвера CurrentUser за UUID (активний, деактивований, відсутній)."""
+    mock_session = AsyncMock()
+    user_id = uuid7()
+    now = datetime.now(UTC)
+
+    user_dto = UserResponseDTO(
+        id=user_id,
+        username="jwt_user",
+        role=SystemRole.USER,
+        settings=UserSettingsResponseDTO(
+            id=uuid7(),
+            user_id=user_id,
+            timezone="Europe/Kyiv",
+            quiet_hours_start=time(23, 0),
+            quiet_hours_end=time(8, 0),
+            preferred_bank=ExchangeRateProvider.MONOBANK,
+            auto_deadline_priority_escalation=True,
+            version=1,
+            created_at=now,
+            updated_at=now,
+        ),
+        version=1,
+        created_at=now,
+        updated_at=now,
+    )
+
+    # 1. Активний користувач -> повертає CurrentUser
+    with pytest.MonkeyPatch.context() as mp:
+        mock_qs = MagicMock()
+        mock_qs.is_user_deleted = AsyncMock(return_value=False)
+        mock_qs.get_by_id = AsyncMock(return_value=user_dto)
+        mp.setattr("src.modules.users.public.UserQueryService", lambda s: mock_qs)
+
+        resolved = await resolve_user_by_id(user_id, mock_session)
+        assert resolved is not None
+        assert resolved.id == user_id
+        assert resolved.username == "jwt_user"
+
+    # 2. Деактивований користувач -> викидає ForbiddenException
+    with pytest.MonkeyPatch.context() as mp:
+        mock_qs = MagicMock()
+        mock_qs.is_user_deleted = AsyncMock(return_value=True)
+        mp.setattr("src.modules.users.public.UserQueryService", lambda s: mock_qs)
+
+        with pytest.raises(ForbiddenException) as exc_info:
+            await resolve_user_by_id(user_id, mock_session)
+        assert "деактивовано" in exc_info.value.message
+
+    # 3. Користувача не знайдено в БД -> повертає None
+    with pytest.MonkeyPatch.context() as mp:
+        mock_qs = MagicMock()
+        mock_qs.is_user_deleted = AsyncMock(return_value=False)
+        mock_qs.get_by_id = AsyncMock(return_value=None)
+        mp.setattr("src.modules.users.public.UserQueryService", lambda s: mock_qs)
+
+        resolved = await resolve_user_by_id(uuid7(), mock_session)
         assert resolved is None
 
 
@@ -148,3 +225,18 @@ async def test_users_api_endpoints() -> None:
             json={"telegram_id": 123, "telegram_chat_id": 123},
         )
         assert res_tg_unauth.status_code == 401
+
+        # 4. Створення Telegram-акаунта звичайним користувачем заборонено (403)
+        res_tg_create_forbidden = await client.post(
+            "/api/v1/users/telegram-accounts",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"telegram_id": 999999, "telegram_chat_id": 999999},
+        )
+        assert res_tg_create_forbidden.status_code == 403
+
+        # 5. Створення Telegram-акаунта без авторизації (401)
+        res_tg_create_unauth = await client.post(
+            "/api/v1/users/telegram-accounts",
+            json={"telegram_id": 999999, "telegram_chat_id": 999999},
+        )
+        assert res_tg_create_unauth.status_code == 401

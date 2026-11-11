@@ -64,4 +64,3 @@ class MedicationLogStatus(enum.StrEnum):
     TAKEN = "TAKEN"
     SNOOZED = "SNOOZED"
     MISSED = "MISSED"
-

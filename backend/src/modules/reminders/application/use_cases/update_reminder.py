@@ -4,12 +4,11 @@ from uuid import UUID
 
 from src.core.exceptions import ForbiddenException, NotFoundException
 from src.core.protocols import IUnitOfWork
-from src.modules.reminders.application.dto import PatchReminderCommand, UpdateReminderCommand
+from src.modules.reminders.application.dto import UpdateReminderCommand
 from src.modules.reminders.domain.aggregates import (
     DeadlineTaskReminder,
     MedicationReminder,
     OpenTaskReminder,
-    ReminderAggregate,
     SubscriptionReminder,
 )
 from src.modules.reminders.domain.exceptions import ReminderNotFoundError
@@ -43,7 +42,7 @@ class UpdateReminderUseCase:
         reminder_id: UUID,
         user_id: UUID,
         cmd: UpdateReminderCommand,
-    ) -> ReminderAggregate:
+    ) -> None:
         """Повне оновлення нагадування з перевіркою версії (OCC) та повного набору полів."""
         reminder = await self._reminder_repo.get_by_id(reminder_id)
         if reminder is None:
@@ -118,120 +117,3 @@ class UpdateReminderUseCase:
         reminder.mark_updated()
         await self._reminder_repo.save(reminder)
         await self._uow.commit()
-        return reminder
-
-
-class PatchReminderUseCase:
-    """Сценарій точкового часткового оновлення нагадування (HTTP PATCH)."""
-
-    def __init__(
-        self,
-        uow: IUnitOfWork,
-        reminder_repo: IReminderRepository,
-        users_gateway: UsersPublicGateway,
-    ) -> None:
-        self._uow = uow
-        self._reminder_repo = reminder_repo
-        self._users_gateway = users_gateway
-
-    async def execute(
-        self,
-        reminder_id: UUID,
-        user_id: UUID,
-        cmd: PatchReminderCommand,
-    ) -> ReminderAggregate:
-        """Часткове оновлення окремих полів нагадування з перевіркою версії (OCC)."""
-        reminder = await self._reminder_repo.get_by_id(reminder_id)
-        if reminder is None:
-            raise ReminderNotFoundError("Нагадування не знайдено.")
-
-        if reminder.user_id != user_id:
-            raise ForbiddenException("Немає прав для редагування цього нагадування.")
-
-        reminder.ensure_active("редагувати деактивоване нагадування")
-        check_version(reminder.version, cmd.version, entity_title="нагадування")
-
-        user_ctx = await self._users_gateway.get_notification_context(user_id)
-        if user_ctx is None:
-            raise NotFoundException("Профіль користувача не знайдено.")
-
-        now_utc = datetime.now(UTC)
-        recalculate_trigger = False
-
-        if cmd.title is not None:
-            reminder.title = cmd.title
-        if cmd.description is not None:
-            reminder.description = cmd.description
-
-        if cmd.schedule_config is not None:
-            parsed_config = parse_schedule_config(reminder.schedule_logic, cmd.schedule_config)
-            reminder.schedule_config = parsed_config
-            recalculate_trigger = True
-
-        if cmd.lead_times is not None:
-            reminder.lead_times = LeadTimes(cmd.lead_times)
-            recalculate_trigger = True
-
-        if isinstance(reminder, OpenTaskReminder):
-            if cmd.base_priority is not None:
-                reminder.base_priority = cmd.base_priority
-
-        elif isinstance(reminder, DeadlineTaskReminder):
-            if cmd.due_datetime is not None:
-                reminder.due_datetime = cmd.due_datetime
-                recalculate_trigger = True
-            if cmd.base_priority is not None:
-                reminder.base_priority = cmd.base_priority
-            reminder.recalculate_priority(now_utc, auto_escalate=user_ctx.auto_deadline_priority_escalation)
-
-        elif isinstance(reminder, SubscriptionReminder):
-            curr = cmd.currency or reminder.regular_amount.currency
-            if cmd.regular_amount is not None:
-                reminder.regular_amount = Money(amount=cmd.regular_amount, currency=curr)
-            if cmd.is_trial is not None:
-                reminder.is_trial = cmd.is_trial
-                recalculate_trigger = True
-            if cmd.trial_end_date is not None:
-                reminder.trial_end_date = cmd.trial_end_date
-                recalculate_trigger = True
-            if cmd.discount_amount is not None:
-                reminder.discount_amount = Money(amount=cmd.discount_amount, currency=curr)
-            if cmd.discount_cycles_total is not None:
-                reminder.discount_cycles_total = cmd.discount_cycles_total
-            if cmd.discount_cycles_remaining is not None:
-                reminder.discount_cycles_remaining = cmd.discount_cycles_remaining
-
-        elif isinstance(reminder, MedicationReminder):
-            if cmd.course_duration_days is not None:
-                reminder.course_duration_days = cmd.course_duration_days
-            if cmd.medication_start_date is not None:
-                reminder.medication_start_date = cmd.medication_start_date
-            if cmd.medication_end_date is not None:
-                reminder.medication_end_date = cmd.medication_end_date
-            if cmd.strict_schedule is not None:
-                reminder.strict_schedule = cmd.strict_schedule
-                recalculate_trigger = True
-
-        if recalculate_trigger:
-            quiet_hours = QuietHoursWindow(
-                start_time=user_ctx.quiet_hours_start,
-                end_time=user_ctx.quiet_hours_end,
-                timezone_name=user_ctx.timezone,
-            )
-            reminder.next_trigger_at = ScheduleCalculator.calculate_next_trigger(
-                reminder_type=reminder.reminder_type,
-                schedule_logic=reminder.schedule_logic,
-                schedule_config=reminder.schedule_config,
-                reference_time_utc=now_utc,
-                lead_times=reminder.lead_times,
-                user_timezone=user_ctx.timezone,
-                quiet_hours=quiet_hours,
-                strict_schedule=getattr(reminder, "strict_schedule", False),
-                is_trial=getattr(reminder, "is_trial", False),
-                trial_end_date=getattr(reminder, "trial_end_date", None),
-            )
-
-        reminder.mark_updated()
-        await self._reminder_repo.save(reminder)
-        await self._uow.commit()
-        return reminder

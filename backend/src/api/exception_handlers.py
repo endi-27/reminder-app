@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -210,6 +211,25 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     )
 
 
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Обробник перевищення ліміту частоти запитів (429 Too Many Requests)."""
+    client_ip = request.client.host if request.client else "unknown"
+    logger.warning(
+        "429 Too Many Requests | Path: {path} | IP: {ip} | Limit: {detail}",
+        path=request.url.path,
+        ip=client_ip,
+        detail=exc.detail,
+    )
+    headers = getattr(exc, "headers", None) or {}
+    return _build_error_response(
+        status_code=429,
+        code="TOO_MANY_REQUESTS",
+        message="Перевищено допустимий ліміт запитів. Будь ласка, зачекайте перед повторною спробою.",
+        details={"limit": exc.detail},
+        headers=headers,
+    )
+
+
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Обробник непередбачених критичних системних помилок 500."""
     logger.exception(
@@ -230,6 +250,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
     """Реєстрація всіх глобальних обробників винятків у FastAPI додатку."""
     app.add_exception_handler(AppException, cast(Any, app_exception_handler))
     app.add_exception_handler(StarletteHTTPException, cast(Any, http_exception_handler))
+    app.add_exception_handler(RateLimitExceeded, cast(Any, rate_limit_exceeded_handler))
     app.add_exception_handler(RequestValidationError, cast(Any, validation_exception_handler))
     app.add_exception_handler(IntegrityError, cast(Any, integrity_error_handler))
     app.add_exception_handler(StaleDataError, cast(Any, stale_data_error_handler))

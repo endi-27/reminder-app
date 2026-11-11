@@ -16,14 +16,14 @@ if TYPE_CHECKING:
 
 
 class UserTelegramAccountModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, VersionedMixin):
-    """ORM-модель прив'язаного профілю Telegram user_telegram_accounts."""
+    """ORM-модель профілю Telegram user_telegram_accounts."""
 
     __tablename__ = "user_telegram_accounts"
 
-    user_id: Mapped[UUID] = mapped_column(
+    user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
-        nullable=False,
+        nullable=True,
         index=True,
     )
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
@@ -31,7 +31,7 @@ class UserTelegramAccountModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, Versio
     tg_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tg_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    user: Mapped["UserModel"] = relationship(
+    user: Mapped["UserModel | None"] = relationship(
         "UserModel",
         back_populates="telegram_account",
         lazy="raise",

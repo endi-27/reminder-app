@@ -62,6 +62,9 @@ class FakeEventBus(IEventBus):
 class FakePasswordHasher(IPasswordHasher):
     """Швидкий тестовий дублер сервісу хешування паролів (< 0.001 сек)."""
 
+    def __init__(self) -> None:
+        self.dummy_verify_call_count = 0
+
     def hash(self, password: str, rounds: int | None = None) -> str:
         return f"hashed_{password}"
 
@@ -69,6 +72,10 @@ class FakePasswordHasher(IPasswordHasher):
         if hashed_password.startswith("hashed_"):
             return hashed_password == f"hashed_{plain_password}"
         return plain_password == hashed_password
+
+    def dummy_verify(self, plain_password: str) -> bool:
+        self.dummy_verify_call_count += 1
+        return False
 
 
 class FakeNotificationPublisher(INotificationPublisher):

@@ -1,10 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
-from src.api.dependencies import CurrentUserDep, require_role
+from src.api.dependencies import AdminWebDep, CurrentUserDep
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
-from src.core.domain.enums import CurrencyCode, SystemRole
+from src.core import limiter, settings
+from src.core.domain.enums import CurrencyCode
 from src.modules.finance.application.dto import (
     ConversionResultDTO,
     ConvertCurrencyQuery,
@@ -104,13 +105,15 @@ async def convert_currency(
     "/rates/sync",
     response_model=SyncRatesResultDTO,
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_role(SystemRole.ADMIN))],
     summary="Примусова синхронізація курсів валют (тільки адміністратори)",
     description=(
         "Запитує актуальні курси від НБУ, Monobank та ПриватБанку та зберігає їх у незмінну історію exchange_rates."
     ),
 )
+@limiter.limit(settings.rate_limit.bank_sync_limit)
 async def sync_rates(
+    request: Request,
+    _admin: AdminWebDep,
     sync_service: Annotated[RateSyncService, Depends(get_rate_sync_service)],
 ) -> SyncRatesResultDTO:
     """Виконує повне оновлення курсів валют від зовнішніх API банків."""

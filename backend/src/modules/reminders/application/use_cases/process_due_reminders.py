@@ -100,7 +100,7 @@ class ProcessDueRemindersUseCase:
                     rate_provider = str(conv.provider_used)
                     is_stale = conv.is_stale_fallback
 
-                if ctx.telegram_chat_id is not None:
+                if ctx.is_active and ctx.telegram_chat_id is not None:
                     payloads_to_publish.append(
                         NotificationPayload(
                             event_type=NotificationEventType.REMINDER_DUE,
@@ -123,7 +123,7 @@ class ProcessDueRemindersUseCase:
                     )
                     notifications_queued += 1
 
-            elif isinstance(reminder, MedicationReminder) and ctx.telegram_chat_id is not None:
+            elif isinstance(reminder, MedicationReminder) and ctx.is_active and ctx.telegram_chat_id is not None:
                 payloads_to_publish.append(
                     NotificationPayload(
                         event_type=NotificationEventType.REMINDER_DUE,
@@ -146,7 +146,7 @@ class ProcessDueRemindersUseCase:
                     now_utc,
                     auto_escalate=ctx.auto_deadline_priority_escalation,
                 )
-                if ctx.telegram_chat_id is not None:
+                if ctx.is_active and ctx.telegram_chat_id is not None:
                     payloads_to_publish.append(
                         NotificationPayload(
                             event_type=NotificationEventType.REMINDER_DUE,
@@ -167,7 +167,7 @@ class ProcessDueRemindersUseCase:
             elif isinstance(reminder, AnniversaryReminder):
                 local_now = now_utc.astimezone(ZoneInfo(ctx.timezone))
                 age = reminder.calculate_age(local_now.year)
-                if ctx.telegram_chat_id is not None:
+                if ctx.is_active and ctx.telegram_chat_id is not None:
                     payloads_to_publish.append(
                         NotificationPayload(
                             event_type=NotificationEventType.REMINDER_DUE,
@@ -184,7 +184,7 @@ class ProcessDueRemindersUseCase:
                     )
                     notifications_queued += 1
 
-            elif isinstance(reminder, OpenTaskReminder) and ctx.telegram_chat_id is not None:
+            elif isinstance(reminder, OpenTaskReminder) and ctx.is_active and ctx.telegram_chat_id is not None:
                 payloads_to_publish.append(
                     NotificationPayload(
                         event_type=NotificationEventType.REMINDER_DUE,

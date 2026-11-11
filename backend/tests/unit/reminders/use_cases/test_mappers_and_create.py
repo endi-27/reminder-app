@@ -277,13 +277,15 @@ class TestCreateReminderUseCase:
             lead_times=["7d", "1d", "0d"],
         )
 
-        reminder = await use_case.execute(user_id=user_id, cmd=cmd)
+        reminder_id = await use_case.execute(user_id=user_id, cmd=cmd)
 
+        assert isinstance(reminder_id, UUID)
+        assert reminder_id in repo.reminders
+        reminder = repo.reminders[reminder_id]
         assert isinstance(reminder, AnniversaryReminder)
         assert reminder.title == "День народження мами"
         assert reminder.status == ReminderStatus.ACTIVE
         assert uow.committed is True
-        assert reminder.id in repo.reminders
 
     @pytest.mark.asyncio
     async def test_create_deadline_task_with_priority_calculation(
@@ -307,8 +309,10 @@ class TestCreateReminderUseCase:
             lead_times=["1d", "2h", "0d"],
         )
 
-        reminder = await use_case.execute(user_id=user_id, cmd=cmd)
+        reminder_id = await use_case.execute(user_id=user_id, cmd=cmd)
 
+        assert isinstance(reminder_id, UUID)
+        reminder = repo.reminders[reminder_id]
         assert isinstance(reminder, DeadlineTaskReminder)
         assert reminder.calculated_priority is not None
         assert uow.committed is True

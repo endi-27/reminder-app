@@ -1,14 +1,16 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-from sqlalchemy import Column, DateTime, Integer, String, select
+from sqlalchemy import Column, DateTime, Integer, String, create_engine, event, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, sessionmaker
 from uuid6 import uuid7
 
+from src.core.domain.enums import SystemRole
 from src.core.exceptions import ResourceLockedException
 from src.infrastructure.db.base import Base, SoftDeleteMixin, UUIDPrimaryKeyMixin
 from src.infrastructure.db.mappers import BaseMapper
@@ -17,6 +19,12 @@ from src.infrastructure.db.repositories import (
     SqlAlchemyBaseCrudRepository,
     SqlAlchemyBaseReadRepository,
 )
+from src.modules.reminders.domain.enums import ReminderStatus, ReminderType, ScheduleLogicType
+from src.modules.reminders.infrastructure.models.medication_log import MedicationIntakeLogModel
+from src.modules.reminders.infrastructure.models.reminder import ReminderModel
+from src.modules.users.infrastructure.models.settings import UserSettingsModel
+from src.modules.users.infrastructure.models.telegram_account import UserTelegramAccountModel
+from src.modules.users.infrastructure.models.user import UserModel
 
 
 class DummyEntity:
@@ -231,3 +239,101 @@ class TestBaseQueryService:
         total = await service._count_total(stmt)
         assert total == 42
         session.execute.assert_awaited_once()
+
+    def test_user_hard_delete_cascades_all_related_tables(self) -> None:
+        """Перевірка каскадного видалення TelegramUsers, Settings, Reminders, MedicationLogs при Hard Delete User."""
+        engine = create_engine("sqlite:///:memory:")
+
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
+        # Видаляємо PostgreSQL-специфічні server_default для сумісності зі SQLite в unit-тесті
+        for table in Base.metadata.tables.values():
+            for col in table.columns:
+                if col.server_default is not None:
+                    col.server_default = None
+
+        Base.metadata.create_all(engine)
+        session_factory = sessionmaker(bind=engine)
+
+        user_id = uuid7()
+        reminder_id = uuid7()
+        med_log_id = uuid7()
+        tg_acc_id = uuid7()
+        settings_id = uuid7()
+
+        with session_factory() as session:
+            user_orm = UserModel(
+                id=user_id,
+                username="cascadetest",
+                role=SystemRole.USER,
+                password_hash="hash",
+                version=1,
+            )
+            session.add(user_orm)
+            session.flush()
+
+            settings_orm = UserSettingsModel(
+                id=settings_id,
+                user_id=user_id,
+                timezone="Europe/Kyiv",
+                quiet_hours_start=time(23, 0),
+                quiet_hours_end=time(8, 0),
+                preferred_bank="MONOBANK",
+                auto_deadline_priority_escalation=True,
+                version=1,
+            )
+            session.add(settings_orm)
+
+            tg_orm = UserTelegramAccountModel(
+                id=tg_acc_id,
+                user_id=user_id,
+                telegram_id=987654321,
+                telegram_chat_id=987654321,
+                tg_username="cascadetg",
+                tg_full_name="Cascade TG",
+                version=1,
+            )
+            session.add(tg_orm)
+
+            reminder_orm = ReminderModel(
+                id=reminder_id,
+                user_id=user_id,
+                reminder_type=ReminderType.MEDICATION,
+                schedule_logic=ScheduleLogicType.DAILY_AT_TIMES,
+                title="Take pills",
+                status=ReminderStatus.ACTIVE,
+                next_trigger_at=datetime.now(UTC),
+                schedule_config={"times": ["08:00"]},
+                lead_times=[],
+                version=1,
+            )
+            session.add(reminder_orm)
+            session.flush()
+
+            log_orm = MedicationIntakeLogModel(
+                id=med_log_id,
+                reminder_id=reminder_id,
+                scheduled_at=datetime.now(UTC),
+                version=1,
+            )
+            session.add(log_orm)
+            session.commit()
+
+        # Фізичне видалення користувача (Hard Delete)
+        with session_factory() as session:
+            user = session.get(UserModel, user_id)
+            assert user is not None
+            session.delete(user)
+            session.commit()
+
+        # Перевірка: всі пов'язані сутності каскадно видалені з БД
+        with session_factory() as session:
+            assert session.get(UserModel, user_id) is None
+            assert session.get(UserSettingsModel, settings_id) is None
+            assert session.get(UserTelegramAccountModel, tg_acc_id) is None
+            assert session.get(ReminderModel, reminder_id) is None
+            assert session.get(MedicationIntakeLogModel, med_log_id) is None

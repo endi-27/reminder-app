@@ -39,7 +39,7 @@ from src.core.context import (
     get_current_username,
 )
 from src.core.database import get_db_session
-from src.core.domain.enums import SystemRole
+from src.core.domain.enums import ClientEnvironment, SystemRole
 from src.core.exceptions import (
     ForbiddenException,
     IncompatibleScheduleLogicError,
@@ -316,6 +316,7 @@ class TestAuthDependencies:
             username="alex_tg",
             role=SystemRole.USER,
             telegram_id=555111,
+            environment=ClientEnvironment.TELEGRAM_BOT,
         )
 
         async def _fake_resolver(tg_id: int, s: AsyncSession) -> CurrentUser | None:

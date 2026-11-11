@@ -68,6 +68,36 @@ class User(AggregateRoot):
         self.mark_updated()
         return self.telegram_account
 
+    def link_telegram_account(self, account: UserTelegramAccount) -> None:
+        """Прив'язує існуючий (вільний) об'єкт Telegram-акаунта до користувача."""
+        self.ensure_active("прив'язати Telegram-акаунт до деактивованого користувача")
+        if self.telegram_account is not None:
+            raise TelegramAccountAlreadyLinkedError("У користувача вже є прив'язаний Telegram-акаунт.")
+        if account.user_id is not None and account.user_id != self.id:
+            raise TelegramAccountAlreadyLinkedError("Цей Telegram-акаунт вже прив'язаний до іншого користувача.")
+
+        account.link_to_user(self.id)
+        self.telegram_account = account
+        self.mark_updated()
+
+    def unlink_telegram(self) -> UserTelegramAccount | None:
+        """Відв'язує профіль Telegram від користувача зі збереженням запису Telegram."""
+        self.ensure_active("відв'язати Telegram від деактивованого користувача")
+        if self.telegram_account is None:
+            return None
+
+        account = self.telegram_account
+        account.unlink()
+        self.telegram_account = None
+        self.mark_updated()
+        return account
+
+    def change_username(self, new_username: str) -> None:
+        """Змінює логін облікового запису користувача."""
+        self.ensure_active("змінити логін деактивованого користувача")
+        self.username = new_username
+        self.mark_updated()
+
     def update_settings(
         self,
         *,
@@ -90,6 +120,14 @@ class User(AggregateRoot):
         self.mark_updated()
         return settings
 
+    def reset_settings(self) -> UserSettings:
+        """Скидає налаштування користувача до значень за замовчуванням."""
+        self.ensure_active("скинути налаштування деактивованого користувача")
+        settings = self.current_settings
+        settings.reset_defaults()
+        self.mark_updated()
+        return settings
+
     def change_password(self, new_password_hash: str) -> None:
         """Змінює пароль облікового запису користувача."""
         self.ensure_active("змінити пароль деактивованого користувача")
@@ -107,3 +145,8 @@ class User(AggregateRoot):
         if self.role == SystemRole.SUPER_ADMIN:
             raise SuperAdminDeletionForbiddenError("Обліковий запис SuperAdmin не може бути видалений.")
         super().soft_delete()
+
+    def restore(self) -> None:
+        """Відновлює м'яко видаленого користувача."""
+        super().restore()
+        self.mark_updated()

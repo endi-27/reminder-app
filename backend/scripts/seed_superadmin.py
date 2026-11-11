@@ -26,7 +26,7 @@ async def seed_superadmin() -> None:
         user_repo = SqlAlchemyUserRepository(session=session)
         hasher = BcryptPasswordHasher(default_rounds=settings.auth.bcrypt_rounds)
 
-        existing = await user_repo.get_by_username(username, include_deleted=True)
+        existing = await user_repo.get_by_username(username)
         if existing is not None:
             logger.info(
                 "Обліковий запис SuperAdmin '{username}' вже існує. Сідування пропущено.",

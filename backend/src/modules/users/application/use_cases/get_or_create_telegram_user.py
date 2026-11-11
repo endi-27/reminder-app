@@ -1,14 +1,17 @@
+from uuid import UUID
+
 from uuid6 import uuid7
 
 from src.core.domain.enums import SystemRole
 from src.core.protocols import IUnitOfWork
 from src.modules.users.application.dto import RegisterTelegramUserCommand
+from src.modules.users.domain.exceptions import UserDeactivatedError
 from src.modules.users.domain.interfaces import IUserRepository
 from src.modules.users.domain.models import User
 
 
 class GetOrCreateTelegramUserUseCase:
-    """Use Case синхронізації профілю та реєстрації користувача з Telegram-бота."""
+    """Use Case синхронізації або створення користувача при команді /start"""
 
     def __init__(self, uow: IUnitOfWork, user_repo: IUserRepository) -> None:
         self._uow = uow
@@ -19,17 +22,19 @@ class GetOrCreateTelegramUserUseCase:
         cmd: RegisterTelegramUserCommand,
         *,
         commit: bool = True,
-    ) -> User:
+    ) -> UUID:
         """
-        Знаходить існуючого користувача за Telegram ID або створює нового.
+        Знаходить існуючого користувача за Telegram ID або атомарно створює нового.
 
-        Оновлює інформацію про чат, нікнейм та повне ім'я користувача.
+        Заборонено автоматично відновлювати деактивованого користувача.
         """
-        user = await self._user_repo.get_by_telegram_id(cmd.telegram_id, include_deleted=True)
+        user = await self._user_repo.get_by_telegram_id(cmd.telegram_id)
 
         if user is not None:
+            # Захист: якщо адміністратор деактивував користувача, /start не повинен його розблокувати
             if not user.is_active:
-                user.restore()
+                raise UserDeactivatedError("Обліковий запис деактивовано. Зверніться до адміністратора.")
+
             user.link_or_update_telegram(
                 telegram_id=cmd.telegram_id,
                 telegram_chat_id=cmd.telegram_chat_id,
@@ -38,13 +43,10 @@ class GetOrCreateTelegramUserUseCase:
             )
             await self._user_repo.save(user)
         else:
-            base_username = cmd.tg_username or f"tg_{cmd.telegram_id}"
-            chosen_username = base_username
-
+            # Логін суворо за шаблоном tg_{telegram_id}
+            chosen_username = f"tg_{cmd.telegram_id}"
             if await self._user_repo.exists_by_username(chosen_username):
-                chosen_username = f"{cmd.tg_username or 'tg'}_{cmd.telegram_id}"
-                if await self._user_repo.exists_by_username(chosen_username):
-                    chosen_username = f"tg_{cmd.telegram_id}_{uuid7().hex[:6]}"
+                chosen_username = f"tg_{cmd.telegram_id}_{uuid7().hex[:6]}"
 
             user = User(
                 id=uuid7(),
@@ -52,7 +54,6 @@ class GetOrCreateTelegramUserUseCase:
                 role=SystemRole.USER,
                 password_hash=None,
             )
-            user.update_settings(timezone=cmd.timezone)
             user.link_or_update_telegram(
                 telegram_id=cmd.telegram_id,
                 telegram_chat_id=cmd.telegram_chat_id,
@@ -64,4 +65,4 @@ class GetOrCreateTelegramUserUseCase:
         if commit:
             await self._uow.commit()
 
-        return user
+        return user.id

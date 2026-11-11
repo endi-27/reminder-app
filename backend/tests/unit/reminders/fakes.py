@@ -27,15 +27,8 @@ class InMemoryReminderRepository(IReminderRepository):
     async def get_by_id(
         self,
         entity_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> ReminderAggregate | None:
-        r = self.reminders.get(entity_id)
-        if r is None:
-            return None
-        if not include_deleted and not r.is_active:
-            return None
-        return r
+        return self.reminders.get(entity_id)
 
     async def save(self, entity: ReminderAggregate, /) -> None:
         self.reminders[entity.id] = entity
@@ -104,15 +97,8 @@ class InMemoryMedicationLogRepository(IMedicationLogRepository):
     async def get_by_id(
         self,
         entity_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> MedicationIntakeLog | None:
-        log = self.logs.get(entity_id)
-        if log is None:
-            return None
-        if not include_deleted and not log.is_active:
-            return None
-        return log
+        return self.logs.get(entity_id)
 
     async def save(self, entity: MedicationIntakeLog, /) -> None:
         self.logs[entity.id] = entity
@@ -120,14 +106,8 @@ class InMemoryMedicationLogRepository(IMedicationLogRepository):
     async def list_by_reminder_id(
         self,
         reminder_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> list[MedicationIntakeLog]:
-        res = [
-            log_item
-            for log_item in self.logs.values()
-            if log_item.reminder_id == reminder_id and (include_deleted or log_item.is_active)
-        ]
+        res = [log_item for log_item in self.logs.values() if log_item.reminder_id == reminder_id]
         res.sort(key=lambda x: x.scheduled_at, reverse=True)
         return res
 

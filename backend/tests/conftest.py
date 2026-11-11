@@ -74,9 +74,7 @@ async def setup_test_database() -> AsyncGenerator[None, None]:
             except Exception:
                 pass
         try:
-            await conn.execute(
-                text(f'CREATE DATABASE "{current_settings.db.name}" OWNER "{current_settings.db.user}"')
-            )
+            await conn.execute(text(f'CREATE DATABASE "{current_settings.db.name}" OWNER "{current_settings.db.user}"'))
         except Exception as exc:
             if "already exists" not in str(exc).lower() and "duplicate_database" not in str(exc).lower():
                 raise

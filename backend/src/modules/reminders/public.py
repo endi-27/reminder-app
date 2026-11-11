@@ -119,6 +119,36 @@ class RemindersPublicGateway:
         should_commit = self._external_uow is None
         return await use_case.execute(now=now, limit=limit, commit=should_commit)
 
+    async def pause_deadline_tasks_by_user_id(
+        self,
+        user_id: UUID,
+        *,
+        uow: IUnitOfWork | None = None,
+    ) -> int:
+        """
+        Призупиняє всі активні задачі з дедлайном вказаного користувача.
+        Ніколи не робить commit самостійно, якщо передано зовнішній uow (Інваріант 7).
+        """
+        count = await self._reminder_repo.pause_active_deadline_tasks_by_user_id(user_id)
+        if uow is None and self._external_uow is None:
+            await self._uow.commit()
+        return count
+
+    async def pause_all_active_reminders_by_user_id(
+        self,
+        user_id: UUID,
+        *,
+        uow: IUnitOfWork | None = None,
+    ) -> int:
+        """
+        Призупиняє всі активні та тріальні нагадування будь-якого типу вказаного користувача (при блокуванні).
+        Ніколи не робить commit самостійно, якщо передано зовнішній uow (Інваріант 7).
+        """
+        count = await self._reminder_repo.pause_all_active_reminders_by_user_id(user_id)
+        if uow is None and self._external_uow is None:
+            await self._uow.commit()
+        return count
+
 
 __all__ = [
     "RemindersPublicGateway",

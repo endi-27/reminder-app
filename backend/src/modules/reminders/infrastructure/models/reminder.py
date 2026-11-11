@@ -163,10 +163,11 @@ class ReminderModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, 
     medication_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     strict_schedule: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
-    # Зв'язок із журналом прийому ліків (lazy="raise" за Інваріантом 5)
+    # Зв'язок із журналом прийому ліків (lazy="raise" за Інваріантом 5, passive_deletes=True за DB ON DELETE CASCADE)
     intake_logs: Mapped[list["MedicationIntakeLogModel"]] = relationship(
         "MedicationIntakeLogModel",
         back_populates="reminder",
         lazy="raise",
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )

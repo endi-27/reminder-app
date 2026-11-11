@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -28,6 +29,38 @@ class ReminderQueryService(BaseQueryService):
     Виконує виключно операції читання (SELECT) та повертає оптимізовані Pydantic DTO (Інваріант 6).
     """
 
+    def _map_reminder(self, model: ReminderModel) -> ReminderResponseDTO:
+        """Трансформація ORM-моделі нагадування у вихідний DTO."""
+        return ReminderResponseDTO.model_validate(model)
+
+    def _map_medication_log(self, model: MedicationIntakeLogModel) -> MedicationIntakeLogResponseDTO:
+        """Трансформація ORM-моделі журналу прийому препарату у вихідний DTO."""
+        return MedicationIntakeLogResponseDTO.model_validate(model)
+
+    def _map_adherence_stats(
+        self,
+        reminder_id: UUID,
+        logs: Sequence[MedicationIntakeLogModel],
+    ) -> MedicationAdherenceStatsDTO:
+        """Розрахунок агрегованої статистики комплаєнсу та збирання вихідного DTO."""
+        total_logs = len(logs)
+        taken_count = sum(1 for log_item in logs if log_item.status == MedicationLogStatus.TAKEN)
+        snoozed_count = sum(1 for log_item in logs if log_item.status == MedicationLogStatus.SNOOZED)
+        missed_count = sum(1 for log_item in logs if log_item.status == MedicationLogStatus.MISSED)
+
+        adherence_rate = (taken_count / total_logs * 100.0) if total_logs > 0 else 0.0
+        log_dtos = [self._map_medication_log(log_item) for log_item in logs]
+
+        return MedicationAdherenceStatsDTO(
+            reminder_id=reminder_id,
+            total_logs=total_logs,
+            taken_count=taken_count,
+            snoozed_count=snoozed_count,
+            missed_count=missed_count,
+            adherence_rate_percent=round(adherence_rate, 2),
+            logs=log_dtos,
+        )
+
     async def get_by_id(
         self,
         reminder_id: UUID,
@@ -45,7 +78,7 @@ class ReminderQueryService(BaseQueryService):
         model = result.scalar_one_or_none()
         if model is None:
             return None
-        return ReminderResponseDTO.model_validate(model)
+        return self._map_reminder(model)
 
     async def list_for_user(
         self,
@@ -78,7 +111,7 @@ class ReminderQueryService(BaseQueryService):
         items_result = await self._session.execute(items_stmt)
         models = items_result.scalars().all()
 
-        items = [ReminderResponseDTO.model_validate(m) for m in models]
+        items = [self._map_reminder(m) for m in models]
         return PaginatedResponse.create(items=items, total=total, params=params)
 
     async def get_medication_adherence(
@@ -102,20 +135,4 @@ class ReminderQueryService(BaseQueryService):
         result = await self._session.execute(stmt)
         logs = result.scalars().all()
 
-        total_logs = len(logs)
-        taken_count = sum(1 for log_item in logs if log_item.status == MedicationLogStatus.TAKEN)
-        snoozed_count = sum(1 for log_item in logs if log_item.status == MedicationLogStatus.SNOOZED)
-        missed_count = sum(1 for log_item in logs if log_item.status == MedicationLogStatus.MISSED)
-
-        adherence_rate = (taken_count / total_logs * 100.0) if total_logs > 0 else 0.0
-
-        log_dtos = [MedicationIntakeLogResponseDTO.model_validate(log_item) for log_item in logs]
-        return MedicationAdherenceStatsDTO(
-            reminder_id=reminder_id,
-            total_logs=total_logs,
-            taken_count=taken_count,
-            snoozed_count=snoozed_count,
-            missed_count=missed_count,
-            adherence_rate_percent=round(adherence_rate, 2),
-            logs=log_dtos,
-        )
+        return self._map_adherence_stats(reminder_id=reminder_id, logs=logs)

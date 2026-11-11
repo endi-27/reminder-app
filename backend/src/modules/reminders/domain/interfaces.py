@@ -16,8 +16,6 @@ class IReminderRepository(Protocol):
     async def get_by_id(
         self,
         entity_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> ReminderAggregate | None:
         """Отримує нагадування за його первинним ключем UUIDv7."""
         ...
@@ -57,6 +55,14 @@ class IReminderRepository(Protocol):
         """Отримує підписки у статусі TRIAL або з акційною знижкою для відправки попереджень."""
         ...
 
+    async def pause_active_deadline_tasks_by_user_id(self, user_id: UUID) -> int:
+        """Призупиняє всі активні задачі з дедлайном для вказаного користувача."""
+        ...
+
+    async def pause_all_active_reminders_by_user_id(self, user_id: UUID) -> int:
+        """Призупиняє всі активні та тріальні нагадування вказаного користувача."""
+        ...
+
 
 class IMedicationLogRepository(Protocol):
     """Порт репозиторію для журналу прийому лікарських засобів."""
@@ -64,8 +70,6 @@ class IMedicationLogRepository(Protocol):
     async def get_by_id(
         self,
         entity_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> MedicationIntakeLog | None:
         """Отримує запис журналу прийому за первинним ключем UUIDv7."""
         ...
@@ -77,8 +81,6 @@ class IMedicationLogRepository(Protocol):
     async def list_by_reminder_id(
         self,
         reminder_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> list[MedicationIntakeLog]:
         """Повертає історію прийомів для зазначеного медичного нагадування."""
         ...

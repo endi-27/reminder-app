@@ -15,3 +15,10 @@ class CurrencyCode(enum.StrEnum):
     UAH = "UAH"
     USD = "USD"
     EUR = "EUR"
+
+
+class ClientEnvironment(enum.StrEnum):
+    """Середовища / канали виклику API платформи."""
+
+    WEB_API = "WEB_API"
+    TELEGRAM_BOT = "TELEGRAM_BOT"

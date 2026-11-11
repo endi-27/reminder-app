@@ -6,7 +6,6 @@ from src.core.protocols import IUnitOfWork
 from src.modules.reminders.application.dto import ReminderActionCommand, ReminderActionType
 from src.modules.reminders.domain.aggregates import (
     MedicationReminder,
-    ReminderAggregate,
     SubscriptionReminder,
 )
 from src.modules.reminders.domain.enums import MedicationLogStatus
@@ -39,7 +38,7 @@ class HandleReminderActionUseCase:
         reminder_id: UUID,
         user_id: UUID,
         cmd: ReminderActionCommand,
-    ) -> ReminderAggregate:
+    ) -> None:
         """Виконує вибрану дію над агрегатом нагадування та зберігає результати в БД."""
         reminder = await self._reminder_repo.get_by_id(reminder_id)
         if reminder is None:
@@ -60,7 +59,18 @@ class HandleReminderActionUseCase:
             reminder.pause()
 
         elif cmd.action == ReminderActionType.RESUME:
-            reminder.resume()
+            user_ctx = await self._users_gateway.get_notification_context(user_id)
+            user_tz = user_ctx.timezone if user_ctx else "Europe/Kyiv"
+            quiet_hours = (
+                QuietHoursWindow(
+                    start_time=user_ctx.quiet_hours_start,
+                    end_time=user_ctx.quiet_hours_end,
+                    timezone_name=user_ctx.timezone,
+                )
+                if user_ctx and user_ctx.quiet_hours_start and user_ctx.quiet_hours_end
+                else None
+            )
+            reminder.resume(reference_time=now_utc, user_timezone=user_tz, quiet_hours=quiet_hours)
 
         elif cmd.action == ReminderActionType.CANCEL:
             reminder.cancel()
@@ -100,4 +110,3 @@ class HandleReminderActionUseCase:
 
         await self._reminder_repo.save(reminder)
         await self._uow.commit()
-        return reminder

@@ -43,7 +43,7 @@ class CreateReminderUseCase:
         self._reminder_repo = reminder_repo
         self._users_gateway = users_gateway
 
-    async def execute(self, user_id: UUID, cmd: CreateReminderCommand) -> ReminderAggregate:
+    async def execute(self, user_id: UUID, cmd: CreateReminderCommand) -> UUID:
         """
         Виконує створення нагадування:
         1. Валідує сумісність пари (reminder_type, schedule_logic).
@@ -195,4 +195,4 @@ class CreateReminderUseCase:
 
         await self._reminder_repo.save(reminder)
         await self._uow.commit()
-        return reminder
+        return reminder.id

@@ -57,17 +57,44 @@ class BaseReminder(AggregateRoot):
         self.status = ReminderStatus.PAUSED
         self.mark_updated()
 
-    def resume(self) -> None:
-        """Відновлює дію призупиненого нагадування."""
+    def resume(
+        self,
+        reference_time: datetime | None = None,
+        user_timezone: str = "Europe/Kyiv",
+        quiet_hours: QuietHoursWindow | None = None,
+    ) -> datetime:
+        """
+        Відновлює дію призупиненого нагадування та детерміновано перераховує next_trigger_at.
+        Час розраховується від поточного/опорного моменту (NOW) з урахуванням часового поясу та періоду тиші.
+        """
         self.ensure_active("відновити деактивоване нагадування")
         if self.status != ReminderStatus.PAUSED:
             raise InvalidReminderStateTransitionError("Відновити можна лише нагадування у статусі PAUSED.")
+
         # Якщо це підписка у тріалі — відновлюємо статус TRIAL, інакше ACTIVE
         if getattr(self, "is_trial", False):
             self.status = ReminderStatus.TRIAL
         else:
             self.status = ReminderStatus.ACTIVE
+
+        ref_time = reference_time or datetime.now(UTC)
+        ref_time = ref_time.replace(tzinfo=UTC) if ref_time.tzinfo is None else ref_time.astimezone(UTC)
+
+        next_dt = ScheduleCalculator.calculate_next_trigger(
+            reminder_type=self.reminder_type,
+            schedule_logic=self.schedule_logic,
+            schedule_config=self.schedule_config,
+            reference_time_utc=ref_time,
+            lead_times=self.lead_times,
+            user_timezone=user_timezone,
+            quiet_hours=quiet_hours,
+            strict_schedule=getattr(self, "strict_schedule", False),
+            is_trial=getattr(self, "is_trial", False),
+            trial_end_date=getattr(self, "trial_end_date", None),
+        )
+        self.next_trigger_at = next_dt
         self.mark_updated()
+        return next_dt
 
     def cancel(self) -> None:
         """Скасовує нагадування користувачем."""

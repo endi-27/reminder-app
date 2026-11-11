@@ -1,4 +1,5 @@
 from src.modules.users.queries.dto import (
+    TelegramAccountDetailDTO,
     TelegramAccountResponseDTO,
     UserNotificationContextDTO,
     UserResponseDTO,
@@ -7,6 +8,7 @@ from src.modules.users.queries.dto import (
 from src.modules.users.queries.query_service import UserQueryService
 
 __all__ = [
+    "TelegramAccountDetailDTO",
     "TelegramAccountResponseDTO",
     "UserNotificationContextDTO",
     "UserQueryService",

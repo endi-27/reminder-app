@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import Select, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.base import ExecutableOption
@@ -34,30 +34,16 @@ class SqlAlchemyBaseReadRepository[TDomain, TModel: IdentifiableModelProtocol]:
         """Опції жадібного завантаження зв'язків за замовчуванням (перевизначається за потреби)."""
         return ()
 
-    def _apply_active_filter(self, stmt: Select[TModel]) -> Select[TModel]:
-        """Фільтрація активних записів без мітки м'якого видалення (deleted_at IS NULL)."""
-        deleted_col = getattr(self._model_cls, "deleted_at", None)
-        if deleted_col is not None:
-            stmt = stmt.where(deleted_col.is_(None))
-        return stmt
-
-    async def get_by_id(self, entity_id: UUID, *, include_deleted: bool = False) -> TDomain | None:
+    async def get_by_id(self, entity_id: UUID) -> TDomain | None:
         """Отримання сутності за первинним ключем (UUIDv7)."""
         stmt = select(self._model_cls).options(*self._default_options()).where(self._model_cls.id == entity_id)
-        if not include_deleted:
-            stmt = self._apply_active_filter(stmt)
         result = await self._session.execute(stmt)
         orm = result.scalar_one_or_none()
         return self._to_domain(orm) if orm is not None else None
 
-    async def exists_by_id(self, entity_id: UUID, *, include_deleted: bool = False) -> bool:
+    async def exists_by_id(self, entity_id: UUID) -> bool:
         """Швидка оптимізована перевірка наявності запису за його UUID через SELECT 1."""
-        stmt = select(1).where(self._model_cls.id == entity_id)
-        if not include_deleted:
-            deleted_col = getattr(self._model_cls, "deleted_at", None)
-            if deleted_col is not None:
-                stmt = stmt.where(deleted_col.is_(None))
-        stmt = stmt.limit(1)
+        stmt = select(1).where(self._model_cls.id == entity_id).limit(1)
         result = await self._session.execute(stmt)
         return bool(result.scalar() is not None)
 

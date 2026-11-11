@@ -16,7 +16,7 @@ from src.core.database import (
     engine,
     get_db_session,
 )
-from src.core.domain import AggregateRoot, BaseEntity, CurrencyCode, SystemRole
+from src.core.domain import AggregateRoot, BaseEntity, ClientEnvironment, CurrencyCode, SystemRole
 from src.core.exceptions import (
     AccountDeactivatedException,
     AppException,
@@ -39,6 +39,7 @@ from src.core.exceptions import (
     UserAlreadyExistsException,
     ValidationException,
 )
+from src.core.limiter import limiter
 from src.core.logger import (
     logger,
     setup_bot_logging,
@@ -68,6 +69,7 @@ __all__ = [
     "AppException",
     "BaseEntity",
     "BcryptPasswordHasher",
+    "ClientEnvironment",
     "ConflictException",
     "CurrentUser",
     "CurrencyCode",
@@ -114,6 +116,7 @@ __all__ = [
     "get_redis_pool",
     "get_settings",
     "is_sensitive_key",
+    "limiter",
     "logger",
     "mask_sensitive_data",
     "set_correlation_id",

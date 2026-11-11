@@ -21,14 +21,13 @@ class SqlAlchemyMedicationLogRepository(
     async def list_by_reminder_id(
         self,
         reminder_id: UUID,
-        *,
-        include_deleted: bool = False,
     ) -> list[MedicationIntakeLog]:
         """Повертає історію прийомів для зазначеного медичного нагадування у хронологічному порядку."""
-        stmt = select(MedicationIntakeLogModel).where(MedicationIntakeLogModel.reminder_id == reminder_id)
-        if not include_deleted:
-            stmt = stmt.where(MedicationIntakeLogModel.deleted_at.is_(None))
-        stmt = stmt.order_by(MedicationIntakeLogModel.scheduled_at.desc())
+        stmt = (
+            select(MedicationIntakeLogModel)
+            .where(MedicationIntakeLogModel.reminder_id == reminder_id)
+            .order_by(MedicationIntakeLogModel.scheduled_at.desc())
+        )
         result = await self._session.execute(stmt)
         models = result.scalars().all()
         return [self._to_domain(m) for m in models]

@@ -1,10 +1,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from src.api.dependencies import CurrentUserDep
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
+from src.core import limiter, settings
 from src.modules.reminders.application.dto import (
     CreateReminderCommand,
     PatchReminderCommand,
@@ -14,15 +15,19 @@ from src.modules.reminders.application.dto import (
 from src.modules.reminders.application.use_cases.create_reminder import (
     CreateReminderUseCase,
 )
-from src.modules.reminders.application.use_cases.delete_reminder import (
-    HardDeleteReminderUseCase,
-    SoftDeleteReminderUseCase,
-)
 from src.modules.reminders.application.use_cases.handle_reminder_action import (
     HandleReminderActionUseCase,
 )
-from src.modules.reminders.application.use_cases.update_reminder import (
+from src.modules.reminders.application.use_cases.hard_delete_reminder import (
+    HardDeleteReminderUseCase,
+)
+from src.modules.reminders.application.use_cases.patch_reminder import (
     PatchReminderUseCase,
+)
+from src.modules.reminders.application.use_cases.soft_delete_reminder import (
+    SoftDeleteReminderUseCase,
+)
+from src.modules.reminders.application.use_cases.update_reminder import (
     UpdateReminderUseCase,
 )
 from src.modules.reminders.dependencies import (
@@ -52,15 +57,17 @@ reminders_router = APIRouter(prefix="/reminders", tags=["Reminders"])
     summary="Створення нового нагадування",
     description="Створює нагадування будь-якого з 5 підтримуваних типів із валідацією сумісності розкладу.",
 )
+@limiter.limit(settings.rate_limit.reminder_write_limit)
 async def create_reminder(
+    request: Request,
     cmd: CreateReminderCommand,
     current_user: CurrentUserDep,
     use_case: Annotated[CreateReminderUseCase, Depends(get_create_reminder_use_case)],
     query_service: Annotated[ReminderQueryService, Depends(get_reminder_query_service)],
 ) -> ReminderResponseDTO:
     """Створює нове нагадування користувача з розрахунком початкового моменту next_trigger_at."""
-    reminder = await use_case.execute(user_id=current_user.id, cmd=cmd)
-    dto = await query_service.get_by_id(reminder.id)
+    reminder_id = await use_case.execute(user_id=current_user.id, cmd=cmd)
+    dto = await query_service.get_by_id(reminder_id)
     if dto is None:
         raise ReminderNotFoundError("Не вдалося завантажити створене нагадування.")
     return dto
@@ -114,7 +121,9 @@ async def get_reminder(
     summary="Повне оновлення нагадування (Full Update)",
     description="Повний перезапис усіх параметрів нагадування з перевіркою версії (OCC).",
 )
+@limiter.limit(settings.rate_limit.reminder_write_limit)
 async def update_reminder(
+    request: Request,
     reminder_id: UUID,
     cmd: UpdateReminderCommand,
     current_user: CurrentUserDep,
@@ -135,7 +144,9 @@ async def update_reminder(
     summary="Часткове оновлення нагадування (Partial Update)",
     description="Точкове оновлення окремих атрибутів нагадування з перевіркою версії (OCC).",
 )
+@limiter.limit(settings.rate_limit.reminder_write_limit)
 async def patch_reminder(
+    request: Request,
     reminder_id: UUID,
     cmd: PatchReminderCommand,
     current_user: CurrentUserDep,

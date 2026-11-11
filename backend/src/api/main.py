@@ -4,7 +4,10 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from src.api.dependencies import register_telegram_user_resolver
+from src.api.dependencies import (
+    register_telegram_user_resolver,
+    register_user_resolver,
+)
 from src.api.exception_handlers import setup_exception_handlers
 from src.api.middlewares import setup_middlewares
 from src.api.v1.router import api_v1_router
@@ -13,7 +16,7 @@ from src.core.database import close_db
 from src.core.events import setup_event_bus
 from src.core.logger import logger, setup_logging
 from src.core.redis import close_redis
-from src.modules.users import resolve_user_by_telegram_id
+from src.modules.users import resolve_user_by_id, resolve_user_by_telegram_id
 from src.utils import configure_tzdata
 
 
@@ -61,8 +64,9 @@ def create_app() -> FastAPI:
     # Підключення роутерів API v1
     application.include_router(api_v1_router)
 
-    # Реєстрація резолвера Telegram-користувача для системи автентифікації
+    # Реєстрація резолверів користувача для системи автентифікації
     register_telegram_user_resolver(resolve_user_by_telegram_id)
+    register_user_resolver(resolve_user_by_id)
 
     @application.get("/", tags=["System"])
     async def root() -> dict[str, Any]:

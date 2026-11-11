@@ -38,6 +38,10 @@ class IPasswordHasher(Protocol):
         """Перевірка відповідності відкритого пароля збереженому хешу."""
         ...
 
+    def dummy_verify(self, plain_password: str) -> bool:
+        """Фіктивна перевірка пароля з константним часом для запобігання timing attacks."""
+        ...
+
 
 class INotificationPublisher(Protocol):
     """Абстрактний протокол публікації сповіщень у чергу доставки (Redis)."""

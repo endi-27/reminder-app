@@ -190,7 +190,7 @@ backend/src/modules/reminders/
 │
 ├── application/                     # 2. WRITE SIDE (Команди та оркестрація транзакцій)
 │   ├── __init__.py
-│   ├── dto.py                       # Command DTO (CreateReminderDTO, RecordActionDTO, SnoozeDTO)
+│   ├── dto.py                       # Вхідні команди з суфіксом *Command (CreateReminderCommand, RecordReminderActionCommand)
 │   └── use_cases/
 │       ├── create_reminder.py       # Створення + первинний розрахунок next_trigger_at
 │       ├── process_due_reminders.py # Обробка пачки шедулера, збагачення курсом, постановка в чергу
@@ -199,7 +199,7 @@ backend/src/modules/reminders/
 │
 ├── queries/                         # 3. READ SIDE (Прагматичний CQRS — швидкі SELECT у DTO)
 │   ├── __init__.py
-│   ├── dto.py                       # ReminderListItemDTO, ReminderDetailDTO, AdherenceReportDTO
+│   ├── dto.py                       # Вихідні проекції з суфіксом *DTO (ReminderListItemDTO, ReminderDetailDTO, AdherenceReportDTO)
 │   └── query_service/               # Read-Side сервіс вибірок
 │       ├── __init__.py              # Фасад (__all__)
 │       └── reminder_query_service.py # ReminderQueryService (фільтри за user_id, типом, статусом)
@@ -243,11 +243,11 @@ backend/src/modules/users/
 │   └── interfaces.py                # IUserRepository (typing.Protocol)
 ├── application/
 │   ├── __init__.py
-│   ├── dto.py                       # RegisterTelegramUserDTO, UpdateUserSettingsDTO
-│   └── use_cases/                   # GetOrCreateTelegramUserUseCase, UpdateSettingsUseCase
+│   ├── dto.py                       # Write Side: вхідні команди *Command (RegisterTelegramUserCommand, UpdateUserSettingsCommand)
+│   └── use_cases/                   # Use Cases (GetOrCreateTelegramUserUseCase, UpdateUserSettingsUseCase)
 ├── queries/
 │   ├── __init__.py
-│   ├── dto.py                       # UserProfileDTO, UserSettingsDTO
+│   ├── dto.py                       # Read Side: вихідні проекції *DTO (UserResponseDTO, UserSettingsResponseDTO)
 │   └── query_service/               # Read-Side сервіс вибірок
 │       ├── __init__.py              # Фасад (__all__)
 │       └── user_query_service.py    # UserQueryService

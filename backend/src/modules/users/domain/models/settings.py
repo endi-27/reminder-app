@@ -63,6 +63,15 @@ class UserSettings(BaseEntity):
             self.auto_deadline_priority_escalation = auto_deadline_priority_escalation
         self.mark_updated()
 
+    def reset_defaults(self) -> None:
+        """Скидає параметри налаштувань до системних значень за замовчуванням."""
+        self.timezone = self.DEFAULT_TIMEZONE
+        self.quiet_hours_start = self.DEFAULT_QUIET_START
+        self.quiet_hours_end = self.DEFAULT_QUIET_END
+        self.preferred_bank = ExchangeRateProvider.MONOBANK
+        self.auto_deadline_priority_escalation = True
+        self.mark_updated()
+
     @classmethod
     def create_default(cls, user_id: UUID) -> "UserSettings":
         """Фабрика створення налаштувань користувача з канонічними значеннями за замовчуванням."""
