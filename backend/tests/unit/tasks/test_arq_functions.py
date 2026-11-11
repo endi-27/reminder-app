@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.modules.finance.application.dto import SyncRatesResultDTO
-from src.modules.finance.domain.enums import ExchangeRateProvider
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.reminders.application.dto import SchedulerBatchResultDTO
 from src.tasks.cron import CRON_JOBS
 from src.tasks.dispatcher import (

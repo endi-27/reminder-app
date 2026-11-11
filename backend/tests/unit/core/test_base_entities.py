@@ -17,13 +17,13 @@ from src.core import (
     OptimisticLockConflictException,
     ResourceAlreadyActiveException,
     ResourceAlreadyInactiveException,
-    SystemRole,
     create_access_token,
     decode_token,
     mask_sensitive_data,
     settings,
     verify_internal_token,
 )
+from src.core.domain.enums import SystemRole
 from src.core.events import AsyncEventBus, BaseEvent
 from src.utils import (
     check_optimistic_lock,

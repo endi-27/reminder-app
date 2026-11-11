@@ -8,13 +8,14 @@ from uuid6 import uuid7
 
 from src.api.main import app
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
-from src.core.security import SystemRole, create_access_token
+from src.core.domain.enums import CurrencyCode, SystemRole
+from src.core.security import create_access_token
 from src.modules.finance.dependencies import (
     get_currency_converter_service,
     get_finance_query_service,
     get_rate_sync_service,
 )
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.models import ConversionResult, ExchangeRate
 from src.modules.finance.public import FinancePublicGateway
 from src.modules.finance.queries.dto import ExchangeRateResponseDTO

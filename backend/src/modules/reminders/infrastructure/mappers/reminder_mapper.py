@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from src.core.domain.enums import CurrencyCode
 from src.infrastructure.db.mappers import BaseMapper
 from src.modules.reminders.domain.aggregates import (
     AnniversaryReminder,
@@ -9,7 +10,7 @@ from src.modules.reminders.domain.aggregates import (
     ReminderAggregate,
     SubscriptionReminder,
 )
-from src.modules.reminders.domain.enums import CurrencyCode, ReminderType
+from src.modules.reminders.domain.enums import ReminderType
 from src.modules.reminders.domain.value_objects import (
     LeadTimes,
     Money,

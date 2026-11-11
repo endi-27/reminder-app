@@ -11,6 +11,7 @@ from src.modules.finance.application.dto import (
 )
 from src.modules.finance.application.services.currency_converter import CurrencyConverterService
 from src.modules.finance.application.services.rate_sync_service import RateSyncService
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.interfaces import IBankRateProviderClient
 from src.modules.finance.infrastructure.clients.monobank_client import MonobankClient
 from src.modules.finance.infrastructure.clients.nbu_client import NbuClient
@@ -82,5 +83,6 @@ class FinancePublicGateway:
 
 
 __all__ = [
+    "ExchangeRateProvider",
     "FinancePublicGateway",
 ]

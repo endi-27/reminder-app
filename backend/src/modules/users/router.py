@@ -8,7 +8,8 @@ from src.api.dependencies import (
     verify_bot_internal_token,
 )
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
-from src.core.security import CurrentUser, SystemRole
+from src.core.domain.enums import SystemRole
+from src.core.security import CurrentUser
 from src.modules.users.application.dto import (
     LoginCommand,
     RegisterTelegramUserCommand,

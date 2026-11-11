@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.core.domain.enums import SystemRole
 from src.infrastructure.db.base import (
     Base,
     SoftDeleteMixin,
@@ -10,7 +11,6 @@ from src.infrastructure.db.base import (
     UUIDPrimaryKeyMixin,
     VersionedMixin,
 )
-from src.modules.users.domain.enums import UserRole
 
 if TYPE_CHECKING:
     from src.modules.users.infrastructure.models.settings import UserSettingsModel
@@ -23,15 +23,15 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Vers
     __tablename__ = "users"
 
     username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    role: Mapped[UserRole] = mapped_column(
+    role: Mapped[SystemRole] = mapped_column(
         Enum(
-            UserRole,
+            SystemRole,
             native_enum=False,
             create_constraint=False,
             length=16,
             values_callable=lambda obj: [e.value for e in obj],
         ),
-        default=UserRole.USER,
+        default=SystemRole.USER,
         server_default="USER",
         nullable=False,
     )

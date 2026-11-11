@@ -4,8 +4,10 @@ from uuid import UUID
 import pytest
 from uuid6 import uuid7
 
+from src.core.domain.enums import SystemRole
 from src.core.exceptions import OptimisticLockConflictException
 from src.core.security import decode_token
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.application.dto import (
     CreateUserCommand,
     LoginCommand,
@@ -20,7 +22,6 @@ from src.modules.users.application.use_cases import (
     SoftDeleteUserUseCase,
     UpdateUserSettingsUseCase,
 )
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
 from src.modules.users.domain.exceptions import (
     InvalidCredentialsError,
     SuperAdminDeletionForbiddenError,
@@ -203,13 +204,13 @@ async def test_create_user_success_and_duplicate() -> None:
     cmd = CreateUserCommand(
         username="marta",
         password="secret_password",
-        role=UserRole.ADMIN,
+        role=SystemRole.ADMIN,
         timezone="Europe/Kyiv",
     )
     created_user = await use_case.execute(cmd)
 
     assert created_user.username == "marta"
-    assert created_user.role == UserRole.ADMIN
+    assert created_user.role == SystemRole.ADMIN
     assert created_user.password_hash == "hashed_secret_password"
     assert created_user.current_settings.timezone == "Europe/Kyiv"
     assert uow.committed is True
@@ -230,7 +231,7 @@ async def test_authenticate_user_success_and_failures() -> None:
     user = User(
         id=user_id,
         username="alex",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         password_hash=hasher.hash("correct_password"),
     )
     user.link_or_update_telegram(telegram_id=123123, telegram_chat_id=123123)
@@ -303,8 +304,8 @@ async def test_delete_user_use_cases() -> None:
     soft_uc = SoftDeleteUserUseCase(uow=uow, user_repo=repo)
     hard_uc = HardDeleteUserUseCase(uow=uow, user_repo=repo)
 
-    super_admin = User(id=uuid7(), username="superadmin", role=UserRole.SUPER_ADMIN)
-    regular_user = User(id=uuid7(), username="regular", role=UserRole.USER)
+    super_admin = User(id=uuid7(), username="superadmin", role=SystemRole.SUPER_ADMIN)
+    regular_user = User(id=uuid7(), username="regular", role=SystemRole.USER)
     await repo.save(super_admin)
     await repo.save(regular_user)
 

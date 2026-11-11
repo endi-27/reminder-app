@@ -65,10 +65,3 @@ class MedicationLogStatus(enum.StrEnum):
     SNOOZED = "SNOOZED"
     MISSED = "MISSED"
 
-
-class CurrencyCode(enum.StrEnum):
-    """Підтримувані коди фінансових валют для підписок."""
-
-    UAH = "UAH"
-    USD = "USD"
-    EUR = "EUR"

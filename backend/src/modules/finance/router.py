@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.api.dependencies import CurrentUserDep, require_role
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
-from src.core.security import SystemRole
+from src.core.domain.enums import CurrencyCode, SystemRole
 from src.modules.finance.application.dto import (
     ConversionResultDTO,
     ConvertCurrencyQuery,
@@ -17,7 +17,7 @@ from src.modules.finance.dependencies import (
     get_finance_query_service,
     get_rate_sync_service,
 )
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.queries.dto import ExchangeRateResponseDTO
 from src.modules.finance.queries.query_service import FinanceQueryService
 

@@ -4,9 +4,9 @@ from decimal import Decimal
 
 import pytest
 
+from src.core.domain.enums import CurrencyCode
 from src.core.exceptions import IncompatibleScheduleLogicError, ValidationException
 from src.modules.reminders.domain import (
-    CurrencyCode,
     DailyAtTimesConfig,
     DateWithMonthIntervalConfig,
     EndOfMonthPolicy,

@@ -3,8 +3,9 @@ from datetime import time
 import pytest
 from uuid6 import uuid7
 
+from src.core.domain.enums import SystemRole
 from src.core.exceptions import InactiveEntityError
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.domain.exceptions import (
     InvalidTimezoneError,
     SuperAdminDeletionForbiddenError,
@@ -16,11 +17,11 @@ from src.modules.users.domain.models import User, UserSettings
 def test_user_creation_default_settings() -> None:
     """Тест створення користувача з автоматичною ініціалізацією типових налаштувань."""
     user_id = uuid7()
-    user = User(id=user_id, username="alice", role=UserRole.USER)
+    user = User(id=user_id, username="alice", role=SystemRole.USER)
 
     assert user.id == user_id
     assert user.username == "alice"
-    assert user.role == UserRole.USER
+    assert user.role == SystemRole.USER
     assert user.is_active is True
     assert user.telegram_account is None
 
@@ -110,7 +111,7 @@ def test_user_update_settings() -> None:
 
 def test_super_admin_soft_delete_protection() -> None:
     """Тест захисту облікового запису SuperAdmin від видалення."""
-    admin_user = User(id=uuid7(), username="root", role=UserRole.SUPER_ADMIN)
+    admin_user = User(id=uuid7(), username="root", role=SystemRole.SUPER_ADMIN)
 
     with pytest.raises(SuperAdminDeletionForbiddenError, match="SuperAdmin не може бути видалений"):
         admin_user.soft_delete()
@@ -121,7 +122,7 @@ def test_super_admin_soft_delete_protection() -> None:
 
 def test_regular_user_soft_delete_and_restore() -> None:
     """Тест деактивації та наступного відновлення звичайного користувача."""
-    user = User(id=uuid7(), username="dave", role=UserRole.USER)
+    user = User(id=uuid7(), username="dave", role=SystemRole.USER)
     assert user.is_active is True
 
     # Деактивація
@@ -137,7 +138,7 @@ def test_regular_user_soft_delete_and_restore() -> None:
 
 def test_inactive_user_mutation_prevention() -> None:
     """Тест блокування будь-яких мутацій деактивованого облікового запису."""
-    user = User(id=uuid7(), username="eve", role=UserRole.USER)
+    user = User(id=uuid7(), username="eve", role=SystemRole.USER)
     user.soft_delete()
 
     # Спроба змінити пароль
@@ -146,7 +147,7 @@ def test_inactive_user_mutation_prevention() -> None:
 
     # Спроба змінити роль
     with pytest.raises(InactiveEntityError):
-        user.change_role(UserRole.ADMIN)
+        user.change_role(SystemRole.ADMIN)
 
     # Спроба оновити налаштування
     with pytest.raises(InactiveEntityError):

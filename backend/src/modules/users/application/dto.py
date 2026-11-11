@@ -3,7 +3,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
+from src.core.domain.enums import SystemRole
+from src.modules.finance.public import ExchangeRateProvider
 
 
 class RegisterTelegramUserCommand(BaseModel):
@@ -47,9 +48,9 @@ class CreateUserCommand(BaseModel):
         Field(default=None, min_length=6, description="Пароль облікового запису"),
     ] = None
     role: Annotated[
-        UserRole,
-        Field(default=UserRole.USER, description="Системна роль користувача"),
-    ] = UserRole.USER
+        SystemRole,
+        Field(default=SystemRole.USER, description="Системна роль користувача"),
+    ] = SystemRole.USER
     timezone: Annotated[
         str,
         Field(default="Europe/Kyiv", description="Бажаний часовий пояс користувача"),

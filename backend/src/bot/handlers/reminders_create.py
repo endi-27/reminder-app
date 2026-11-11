@@ -32,9 +32,9 @@ from src.bot.states.reminder_create import (
     OpenTaskCreateStates,
     SubscriptionCreateStates,
 )
+from src.core.domain.enums import CurrencyCode
 from src.modules.reminders.application.dto import CreateReminderCommand
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     Priority,
     ReminderType,
     ScheduleLogicType,

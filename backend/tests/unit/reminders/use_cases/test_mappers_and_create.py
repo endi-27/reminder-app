@@ -6,7 +6,9 @@ from uuid import UUID
 import pytest
 from uuid6 import uuid7
 
+from src.core.domain.enums import CurrencyCode
 from src.core.exceptions import IncompatibleScheduleLogicError
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.reminders.application.dto import CreateReminderCommand
 from src.modules.reminders.application.use_cases import CreateReminderUseCase
 from src.modules.reminders.domain.aggregates import (
@@ -18,7 +20,6 @@ from src.modules.reminders.domain.aggregates import (
     SubscriptionReminder,
 )
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     MedicationLogStatus,
     Priority,
     ReminderStatus,
@@ -37,7 +38,6 @@ from src.modules.reminders.infrastructure.mappers import (
     MedicationIntakeLogMapper,
     ReminderMapper,
 )
-from src.modules.users.domain.enums import ExchangeRateProvider
 from src.modules.users.public import UsersPublicGateway
 from src.modules.users.queries.dto import UserNotificationContextDTO
 from tests.unit.fakes import FakeUnitOfWork

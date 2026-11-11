@@ -39,6 +39,7 @@ from src.core.context import (
     get_current_username,
 )
 from src.core.database import get_db_session
+from src.core.domain.enums import SystemRole
 from src.core.exceptions import (
     ForbiddenException,
     IncompatibleScheduleLogicError,
@@ -46,7 +47,7 @@ from src.core.exceptions import (
     UnauthorizedException,
 )
 from src.core.redis import get_redis_client
-from src.core.security import CurrentUser, SystemRole, create_access_token
+from src.core.security import CurrentUser, create_access_token
 from src.infrastructure.db.base import Base
 from src.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from src.infrastructure.notifications.redis_queue_publisher import RedisQueuePublisher

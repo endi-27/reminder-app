@@ -54,16 +54,16 @@ from src.bot.states.reminder_create import (
     OpenTaskCreateStates,
     SubscriptionCreateStates,
 )
+from src.core.domain.enums import CurrencyCode, SystemRole
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.reminders.application.dto import CreateReminderCommand
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     Priority,
     ReminderStatus,
     ReminderType,
     ScheduleLogicType,
 )
 from src.modules.reminders.queries.dto import ReminderResponseDTO
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
 from src.modules.users.queries.dto import (
     TelegramAccountResponseDTO,
     UserResponseDTO,
@@ -104,7 +104,7 @@ def _make_dummy_user(
     return UserResponseDTO(
         id=uid,
         username="test_creator",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         telegram_account=TelegramAccountResponseDTO(
             id=uuid7(),
             telegram_id=tg_id,

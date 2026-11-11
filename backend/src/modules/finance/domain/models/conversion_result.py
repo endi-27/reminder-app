@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 
 
 @dataclass(frozen=True, kw_only=True)

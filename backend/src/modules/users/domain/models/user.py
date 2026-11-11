@@ -4,7 +4,8 @@ from datetime import time
 from uuid6 import uuid7
 
 from src.core.domain import AggregateRoot
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
+from src.core.domain.enums import SystemRole
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.domain.exceptions import (
     SuperAdminDeletionForbiddenError,
     TelegramAccountAlreadyLinkedError,
@@ -18,7 +19,7 @@ class User(AggregateRoot):
     """Корінь агрегата облікового запису користувача системи."""
 
     username: str
-    role: UserRole = UserRole.USER
+    role: SystemRole = SystemRole.USER
     password_hash: str | None = None
     telegram_account: UserTelegramAccount | None = None
     settings: UserSettings | None = None
@@ -95,7 +96,7 @@ class User(AggregateRoot):
         self.password_hash = new_password_hash
         self.mark_updated()
 
-    def change_role(self, new_role: UserRole) -> None:
+    def change_role(self, new_role: SystemRole) -> None:
         """Змінює системну роль користувача."""
         self.ensure_active("змінити роль деактивованого користувача")
         self.role = new_role
@@ -103,6 +104,6 @@ class User(AggregateRoot):
 
     def soft_delete(self) -> None:
         """М'яке видалення користувача із захистом облікового запису SuperAdmin."""
-        if self.role == UserRole.SUPER_ADMIN:
+        if self.role == SystemRole.SUPER_ADMIN:
             raise SuperAdminDeletionForbiddenError("Обліковий запис SuperAdmin не може бути видалений.")
         super().soft_delete()

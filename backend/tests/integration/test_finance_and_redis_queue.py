@@ -6,13 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
 from src.core.config import settings
+from src.core.domain.enums import CurrencyCode
 from src.core.redis import RedisClient
 from src.infrastructure.notifications import (
     NotificationEventType,
     NotificationPayload,
     RedisQueuePublisher,
 )
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.models import ExchangeRate
 from src.modules.finance.infrastructure.repository import SqlAlchemyExchangeRateRepository
 from src.modules.finance.queries.query_service import FinanceQueryService

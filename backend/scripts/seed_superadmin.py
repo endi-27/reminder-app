@@ -9,9 +9,9 @@ from uuid6 import uuid7
 
 from src.core import logger, settings
 from src.core.database import async_session_factory
+from src.core.domain.enums import SystemRole
 from src.core.security import BcryptPasswordHasher
 from src.infrastructure.db.uow import SqlAlchemyUnitOfWork
-from src.modules.users.domain.enums import UserRole
 from src.modules.users.domain.models import User, UserSettings
 from src.modules.users.infrastructure.repository import SqlAlchemyUserRepository
 
@@ -41,7 +41,7 @@ async def seed_superadmin() -> None:
         superadmin = User(
             id=user_id,
             username=username,
-            role=UserRole.SUPER_ADMIN,
+            role=SystemRole.SUPER_ADMIN,
             password_hash=hashed_password,
             settings=user_settings,
         )

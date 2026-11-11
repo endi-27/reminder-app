@@ -5,8 +5,8 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.core.domain.enums import CurrencyCode
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     MedicationLogStatus,
     Priority,
     ReminderStatus,

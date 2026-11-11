@@ -3,7 +3,8 @@ from collections.abc import Sequence
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.interfaces import IExchangeRateRepository
 from src.modules.finance.domain.models import ExchangeRate
 from src.modules.finance.infrastructure.mappers import ExchangeRateMapper

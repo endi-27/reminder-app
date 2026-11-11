@@ -4,7 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
+from src.core.domain.enums import SystemRole
+from src.modules.finance.public import ExchangeRateProvider
 
 
 class UserSettingsResponseDTO(BaseModel):
@@ -50,7 +51,7 @@ class UserResponseDTO(BaseModel):
 
     id: Annotated[UUID, Field(description="UUIDv7 користувача")]
     username: Annotated[str, Field(description="Логін користувача")]
-    role: Annotated[UserRole, Field(description="Системна роль користувача")]
+    role: Annotated[SystemRole, Field(description="Системна роль користувача")]
     telegram_account: Annotated[
         TelegramAccountResponseDTO | None,
         Field(default=None, description="Дані прив'язаного профілю Telegram"),

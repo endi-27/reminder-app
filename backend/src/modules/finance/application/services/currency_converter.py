@@ -2,7 +2,8 @@ from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 from src.core import settings
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.exceptions import (
     ExchangeRateNotFoundError,
     UnsupportedCurrencyError,

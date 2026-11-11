@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.models import ExchangeRate
 from src.modules.finance.infrastructure.mappers import ExchangeRateMapper
 from src.modules.finance.infrastructure.models import ExchangeRateModel

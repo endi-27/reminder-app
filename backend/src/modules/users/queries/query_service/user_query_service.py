@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
 from src.infrastructure.db.queries import BaseQueryService
-from src.modules.users.domain.enums import ExchangeRateProvider
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.infrastructure.models import (
     UserModel,
     UserSettingsModel,

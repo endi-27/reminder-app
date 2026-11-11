@@ -11,7 +11,7 @@ from src.infrastructure.db.base import (
     UUIDPrimaryKeyMixin,
     VersionedMixin,
 )
-from src.modules.users.domain.enums import ExchangeRateProvider
+from src.modules.finance.public import ExchangeRateProvider
 
 if TYPE_CHECKING:
     from src.modules.users.infrastructure.models.user import UserModel

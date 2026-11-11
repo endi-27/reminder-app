@@ -3,8 +3,9 @@ from decimal import Decimal
 import httpx
 import pytest
 
+from src.core.domain.enums import CurrencyCode
 from src.modules.finance.application.services.rate_sync_service import RateSyncService
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.exceptions import BankProviderFetchError
 from src.modules.finance.domain.interfaces import IBankRateProviderClient
 from src.modules.finance.domain.models import ExchangeRate

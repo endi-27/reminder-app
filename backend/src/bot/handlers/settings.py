@@ -20,8 +20,8 @@ from src.bot.keyboards import (
     build_timezone_selection_keyboard,
 )
 from src.bot.states.settings_edit import SettingsEditStates
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.application.dto import UpdateUserSettingsCommand
-from src.modules.users.domain.enums import ExchangeRateProvider
 from src.modules.users.queries.dto import UserResponseDTO
 
 settings_router = Router(name="settings")

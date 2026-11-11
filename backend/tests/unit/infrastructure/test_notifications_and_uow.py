@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.base import NO_VALUE
 from uuid6 import uuid7
 
+from src.core.domain.enums import CurrencyCode
 from src.infrastructure.db.inspection import get_loaded, is_loaded
 from src.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from src.infrastructure.notifications.dto import (
@@ -17,7 +18,7 @@ from src.infrastructure.notifications.dto import (
     NotificationPayload,
 )
 from src.infrastructure.notifications.redis_queue_publisher import RedisQueuePublisher
-from src.modules.reminders.domain.enums import CurrencyCode, Priority, ReminderType
+from src.modules.reminders.domain.enums import Priority, ReminderType
 
 
 class TestNotificationDTOs:

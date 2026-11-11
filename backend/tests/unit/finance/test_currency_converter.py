@@ -4,8 +4,9 @@ from decimal import Decimal
 
 import pytest
 
+from src.core.domain.enums import CurrencyCode
 from src.modules.finance.application.services.currency_converter import CurrencyConverterService
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.exceptions import (
     ExchangeRateNotFoundError,
     UnsupportedCurrencyError,

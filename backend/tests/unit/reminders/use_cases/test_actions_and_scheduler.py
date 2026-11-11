@@ -6,8 +6,10 @@ from zoneinfo import ZoneInfo
 import pytest
 from uuid6 import uuid7
 
+from src.core.domain.enums import CurrencyCode
 from src.core.exceptions import OptimisticLockConflictException
 from src.infrastructure.notifications import NotificationEventType
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.reminders.application.dto import (
     PatchReminderCommand,
     ReminderActionCommand,
@@ -28,7 +30,6 @@ from src.modules.reminders.domain.aggregates import (
     SubscriptionReminder,
 )
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     MedicationLogStatus,
     Priority,
     ScheduleLogicType,
@@ -39,7 +40,6 @@ from src.modules.reminders.domain.value_objects import (
     IntervalHoursConfig,
     Money,
 )
-from src.modules.users.domain.enums import ExchangeRateProvider
 from src.modules.users.public import UsersPublicGateway
 from src.modules.users.queries.dto import UserNotificationContextDTO
 from tests.unit.fakes import FakeNotificationPublisher, FakeUnitOfWork

@@ -59,14 +59,15 @@ from src.bot.keyboards import (
     build_timezone_selection_keyboard,
 )
 from src.bot.middlewares import BotAuthMiddleware, BotLoggingMiddleware
+from src.core.domain.enums import SystemRole
 from src.infrastructure.notifications.dto import (
     DigestTaskItemDTO,
     NotificationEventType,
     NotificationPayload,
 )
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.reminders.domain.enums import ReminderStatus, ReminderType, ScheduleLogicType
 from src.modules.reminders.queries.dto import ReminderResponseDTO
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
 from src.modules.users.queries.dto import (
     TelegramAccountResponseDTO,
     UserResponseDTO,
@@ -78,7 +79,7 @@ def _make_dummy_user_dto(user_id: UUID, tg_id: int = 123456789) -> UserResponseD
     return UserResponseDTO(
         id=user_id,
         username="test_user",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         telegram_account=TelegramAccountResponseDTO(
             id=uuid7(),
             telegram_id=tg_id,

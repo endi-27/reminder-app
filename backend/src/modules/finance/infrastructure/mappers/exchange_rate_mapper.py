@@ -1,5 +1,6 @@
+from src.core.domain.enums import CurrencyCode
 from src.infrastructure.db.mappers import BaseMapper
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.models import ExchangeRate
 from src.modules.finance.infrastructure.models import ExchangeRateModel
 

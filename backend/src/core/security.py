@@ -1,4 +1,3 @@
-import enum
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
@@ -9,15 +8,8 @@ import jwt
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.config import get_settings, settings
+from src.core.domain.enums import SystemRole
 from src.core.protocols import IPasswordHasher
-
-
-class SystemRole(enum.StrEnum):
-    """Системні ролі користувачів платформи"""
-
-    SUPER_ADMIN = "SUPER_ADMIN"
-    ADMIN = "ADMIN"
-    USER = "USER"
 
 
 class CurrentUser(BaseModel):

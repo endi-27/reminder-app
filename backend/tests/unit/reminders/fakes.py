@@ -167,18 +167,14 @@ class FakeFinanceGateway:
         currency: str,
         preferred_bank: str = "MONOBANK",
     ) -> ConversionResultDTO:
-        from src.modules.finance.domain.enums import (
-            CurrencyCode as FinanceCurrencyCode,
-        )
-        from src.modules.finance.domain.enums import (
-            ExchangeRateProvider,
-        )
+        from src.core.domain.enums import CurrencyCode
+        from src.modules.finance.public import ExchangeRateProvider
 
         amount_uah = (amount * self.rate).quantize(Decimal("0.01"))
         provider_val = self.provider if not self.is_stale else "NBU"
         return ConversionResultDTO(
             original_amount=amount,
-            original_currency=FinanceCurrencyCode(currency),
+            original_currency=CurrencyCode(currency),
             amount_uah=amount_uah,
             rate_used=self.rate,
             provider_used=ExchangeRateProvider(provider_val),

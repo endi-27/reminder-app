@@ -9,7 +9,6 @@ from src.modules.reminders.domain.aggregates import (
     SubscriptionReminder,
 )
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     EndOfMonthPolicy,
     MedicationLogStatus,
     Priority,
@@ -61,7 +60,6 @@ from src.modules.reminders.domain.value_objects import (
 __all__ = [
     "AnniversaryReminder",
     "BaseReminder",
-    "CurrencyCode",
     "DailyAtTimesConfig",
     "DateWithMonthIntervalConfig",
     "DeadlineTaskReminder",

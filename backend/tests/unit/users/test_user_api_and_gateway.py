@@ -6,11 +6,12 @@ from httpx import ASGITransport, AsyncClient
 from uuid6 import uuid7
 
 from src.api.main import app
-from src.core.security import SystemRole, create_access_token
+from src.core.domain.enums import SystemRole
+from src.core.security import create_access_token
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.application.dto import (
     RegisterTelegramUserCommand,
 )
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
 from src.modules.users.domain.models import User
 from src.modules.users.public import UsersPublicGateway, resolve_user_by_telegram_id
 from src.modules.users.queries.dto import (
@@ -81,7 +82,7 @@ async def test_resolve_user_by_telegram_id_found_and_not_found() -> None:
     user_dto = UserResponseDTO(
         id=user_id,
         username="tg_pilot",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         settings=UserSettingsResponseDTO(
             id=uuid7(),
             user_id=user_id,

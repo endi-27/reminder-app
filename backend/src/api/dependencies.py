@@ -9,12 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.context import current_user_id_ctx, current_username_ctx
 from src.core.database import get_db_session
+from src.core.domain.enums import SystemRole
 from src.core.exceptions import ForbiddenException, UnauthorizedException
 from src.core.protocols import INotificationPublisher, IUnitOfWork
 from src.core.redis import RedisClient, get_redis_client
 from src.core.security import (
     CurrentUser,
-    SystemRole,
     decode_token,
     verify_internal_token,
 )

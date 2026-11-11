@@ -2,16 +2,10 @@
   // ---------------------------------------------------------------------------
   // 1. Python Interpreter та аналіз шляхів (Monorepo Backend)
   // ---------------------------------------------------------------------------
-  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
-  "[windows]": {
-    "python.defaultInterpreterPath": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe"
-  },
-  "[linux]": {
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python"
-  },
-  "[osx]": {
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python"
-  },
+  // Автопошук venv у підпапці backend без жорсткої прив'язки до ОС (Scripts vs bin):
+  "python-envs.workspaceSearchPaths": [
+    "./backend/.venv"
+  ],
   "python.analysis.autoSearchPaths": true,
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend",

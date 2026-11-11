@@ -16,7 +16,7 @@ from src.core.database import (
     engine,
     get_db_session,
 )
-from src.core.domain import AggregateRoot, BaseEntity
+from src.core.domain import AggregateRoot, BaseEntity, CurrencyCode, SystemRole
 from src.core.exceptions import (
     AccountDeactivatedException,
     AppException,
@@ -56,7 +56,6 @@ from src.core.redis import RedisClient, close_redis, get_redis_client, get_redis
 from src.core.security import (
     BcryptPasswordHasher,
     CurrentUser,
-    SystemRole,
     create_access_token,
     decode_token,
     default_password_hasher,
@@ -71,6 +70,7 @@ __all__ = [
     "BcryptPasswordHasher",
     "ConflictException",
     "CurrentUser",
+    "CurrencyCode",
     "DataInconsistencyException",
     "DomainException",
     "ForbiddenException",

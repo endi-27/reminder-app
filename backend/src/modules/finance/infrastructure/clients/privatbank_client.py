@@ -4,7 +4,8 @@ from typing import Any
 import httpx
 
 from src.core import logger, settings
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.exceptions import BankProviderFetchError
 from src.modules.finance.domain.interfaces import IBankRateProviderClient
 from src.modules.finance.domain.models import ExchangeRate

@@ -4,7 +4,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 
 
 class ConvertCurrencyQuery(BaseModel):

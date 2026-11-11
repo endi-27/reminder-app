@@ -1,8 +1,8 @@
 from uuid6 import uuid7
 
+from src.core.domain.enums import SystemRole
 from src.core.protocols import IUnitOfWork
 from src.modules.users.application.dto import RegisterTelegramUserCommand
-from src.modules.users.domain.enums import UserRole
 from src.modules.users.domain.interfaces import IUserRepository
 from src.modules.users.domain.models import User
 
@@ -49,7 +49,7 @@ class GetOrCreateTelegramUserUseCase:
             user = User(
                 id=uuid7(),
                 username=chosen_username,
-                role=UserRole.USER,
+                role=SystemRole.USER,
                 password_hash=None,
             )
             user.update_settings(timezone=cmd.timezone)

@@ -5,7 +5,8 @@ from uuid import UUID
 
 from uuid6 import uuid7
 
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.utils.datetime import ensure_utc_datetime, now_utc
 
 

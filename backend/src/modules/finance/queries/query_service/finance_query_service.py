@@ -2,8 +2,9 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.dialects.postgresql import distinct_on
 
 from src.api.schemas.pagination import PaginatedResponse, PaginationParams
+from src.core.domain.enums import CurrencyCode
 from src.infrastructure.db.queries import BaseQueryService
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.infrastructure.models import ExchangeRateModel
 from src.modules.finance.queries.dto import ExchangeRateResponseDTO
 

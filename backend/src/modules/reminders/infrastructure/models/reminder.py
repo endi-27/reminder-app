@@ -20,6 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.core.domain.enums import CurrencyCode
 from src.infrastructure.db.base import (
     Base,
     SoftDeleteMixin,
@@ -28,7 +29,6 @@ from src.infrastructure.db.base import (
     VersionedMixin,
 )
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     Priority,
     ReminderStatus,
     ReminderType,

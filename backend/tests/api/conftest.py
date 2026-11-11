@@ -5,7 +5,8 @@ import pytest
 from uuid6 import uuid7
 
 from src.core.config import settings
-from src.core.security import SystemRole, create_access_token
+from src.core.domain.enums import SystemRole
+from src.core.security import create_access_token
 
 
 @pytest.fixture

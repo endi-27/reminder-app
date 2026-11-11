@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from src.core.domain.enums import CurrencyCode
 from src.core.protocols import INotificationPublisher, IUnitOfWork
 from src.infrastructure.notifications.dto import NotificationEventType, NotificationPayload
 from src.modules.finance.public import FinancePublicGateway
@@ -13,7 +14,6 @@ from src.modules.reminders.domain.aggregates import (
     OpenTaskReminder,
     SubscriptionReminder,
 )
-from src.modules.reminders.domain.enums import CurrencyCode
 from src.modules.reminders.domain.interfaces import IReminderRepository
 from src.modules.reminders.domain.value_objects import QuietHoursWindow
 from src.modules.users.public import UsersPublicGateway

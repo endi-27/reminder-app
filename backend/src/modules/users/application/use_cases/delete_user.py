@@ -1,7 +1,7 @@
 from uuid import UUID
 
+from src.core.domain.enums import SystemRole
 from src.core.protocols import IUnitOfWork
-from src.modules.users.domain.enums import UserRole
 from src.modules.users.domain.exceptions import (
     SuperAdminDeletionForbiddenError,
     UserNotFoundError,
@@ -43,7 +43,7 @@ class HardDeleteUserUseCase:
         if user is None:
             raise UserNotFoundError(f"Користувача з ID {user_id} не знайдено.")
 
-        if user.role == UserRole.SUPER_ADMIN:
+        if user.role == SystemRole.SUPER_ADMIN:
             raise SuperAdminDeletionForbiddenError("Обліковий запис SuperAdmin не може бути видалений.")
 
         await self._user_repo.delete_by_id(user_id)

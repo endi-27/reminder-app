@@ -7,7 +7,7 @@ from uuid import UUID
 from uuid6 import uuid7
 
 from src.core.domain import BaseEntity
-from src.modules.users.domain.enums import ExchangeRateProvider
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.users.domain.exceptions import InvalidTimezoneError
 
 

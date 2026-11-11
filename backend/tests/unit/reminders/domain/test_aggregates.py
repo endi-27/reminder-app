@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from uuid6 import uuid7
 
+from src.core.domain.enums import CurrencyCode
 from src.core.exceptions import (
     InactiveEntityError,
     IncompatibleScheduleLogicError,
@@ -13,7 +14,6 @@ from src.core.exceptions import (
 from src.modules.reminders.domain import (
     AnniversaryReminder,
     BaseReminder,
-    CurrencyCode,
     DailyAtTimesConfig,
     DateWithMonthIntervalConfig,
     DeadlineTaskReminder,

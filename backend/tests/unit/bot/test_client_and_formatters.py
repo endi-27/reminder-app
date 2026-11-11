@@ -42,12 +42,13 @@ from src.bot.states import (
     SettingsEditStates,
     SubscriptionCreateStates,
 )
+from src.core.domain.enums import CurrencyCode, SystemRole
 from src.infrastructure.notifications.dto import (
     DigestTaskItemDTO,
     NotificationEventType,
     NotificationPayload,
 )
-from src.modules.finance.domain.enums import ExchangeRateProvider
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.finance.queries.dto import ExchangeRateResponseDTO
 from src.modules.reminders.application.dto import (
     CreateReminderCommand,
@@ -56,7 +57,6 @@ from src.modules.reminders.application.dto import (
     ReminderActionType,
 )
 from src.modules.reminders.domain.enums import (
-    CurrencyCode,
     MedicationLogStatus,
     Priority,
     ReminderStatus,
@@ -72,12 +72,6 @@ from src.modules.users.application.dto import (
     RegisterTelegramUserCommand,
     UpdateUserSettingsCommand,
 )
-from src.modules.users.domain.enums import (
-    ExchangeRateProvider as UserExchangeRateProvider,
-)
-from src.modules.users.domain.enums import (
-    UserRole,
-)
 from src.modules.users.queries.dto import (
     TelegramAccountResponseDTO,
     UserResponseDTO,
@@ -89,7 +83,7 @@ def _make_dummy_user_dto(user_id: UUID, tg_id: int = 123456789) -> UserResponseD
     return UserResponseDTO(
         id=user_id,
         username="test_username",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         telegram_account=TelegramAccountResponseDTO(
             id=uuid7(),
             telegram_id=tg_id,
@@ -104,7 +98,7 @@ def _make_dummy_user_dto(user_id: UUID, tg_id: int = 123456789) -> UserResponseD
             timezone="Europe/Kyiv",
             quiet_hours_start=time(23, 0),
             quiet_hours_end=time(8, 0),
-            preferred_bank=UserExchangeRateProvider.MONOBANK,
+            preferred_bank=ExchangeRateProvider.MONOBANK,
             auto_deadline_priority_escalation=True,
             version=1,
             created_at=datetime.now(UTC),
@@ -215,7 +209,7 @@ class TestBackendApiClient:
                 assert data["version"] == 1
                 assert data["preferred_bank"] == "PRIVATBANK"
                 updated_dto = settings_dto.model_copy(
-                    update={"preferred_bank": UserExchangeRateProvider.PRIVATBANK, "version": 2}
+                    update={"preferred_bank": ExchangeRateProvider.PRIVATBANK, "version": 2}
                 )
                 return httpx.Response(200, json=updated_dto.model_dump(mode="json"))
             return httpx.Response(405)
@@ -228,14 +222,14 @@ class TestBackendApiClient:
                 http_client=http_client,
             )
             cur = await client.get_user_settings(123456789)
-            assert cur.preferred_bank == UserExchangeRateProvider.MONOBANK
+            assert cur.preferred_bank == ExchangeRateProvider.MONOBANK
 
             cmd = UpdateUserSettingsCommand(
                 version=1,
-                preferred_bank=UserExchangeRateProvider.PRIVATBANK,
+                preferred_bank=ExchangeRateProvider.PRIVATBANK,
             )
             updated = await client.update_user_settings(123456789, cmd)
-            assert updated.preferred_bank == UserExchangeRateProvider.PRIVATBANK
+            assert updated.preferred_bank == ExchangeRateProvider.PRIVATBANK
             assert updated.version == 2
 
     @pytest.mark.asyncio

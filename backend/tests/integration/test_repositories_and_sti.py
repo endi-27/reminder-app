@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 from uuid6 import uuid7
 
+from src.core.domain.enums import CurrencyCode, SystemRole
 from src.modules.reminders.domain import (
     AnniversaryReminder,
-    CurrencyCode,
     DailyAtTimesConfig,
     DateWithMonthIntervalConfig,
     DeadlineTaskReminder,
@@ -25,7 +25,6 @@ from src.modules.reminders.domain import (
 from src.modules.reminders.domain.value_objects import LeadTimes
 from src.modules.reminders.infrastructure.models import ReminderModel
 from src.modules.reminders.infrastructure.repository import SqlAlchemyReminderRepository
-from src.modules.users.domain.enums import UserRole
 from src.modules.users.domain.models import User, UserSettings
 from src.modules.users.infrastructure.repository import SqlAlchemyUserRepository
 
@@ -37,7 +36,7 @@ async def _create_test_user(session: AsyncSession) -> User:
     user = User(
         id=user_id,
         username=f"test_sti_user_{user_id.hex[:6]}",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         password_hash="test_hashed_password",
         settings=UserSettings.create_default(user_id),
     )

@@ -5,8 +5,9 @@ from uuid import UUID
 
 from pydantic import Field
 
+from src.core.domain.enums import CurrencyCode
 from src.core.events.base import BaseEvent
-from src.modules.reminders.domain.enums import CurrencyCode, MedicationLogStatus
+from src.modules.reminders.domain.enums import MedicationLogStatus
 
 
 class ReminderScheduledEvent(BaseEvent):

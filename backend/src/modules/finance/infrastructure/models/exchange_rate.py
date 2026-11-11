@@ -3,8 +3,9 @@ from decimal import Decimal
 from sqlalchemy import Enum, Index, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.core.domain.enums import CurrencyCode
 from src.infrastructure.db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.modules.finance.domain.enums import ExchangeRateProvider
 
 
 class ExchangeRateModel(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):

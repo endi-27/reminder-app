@@ -10,8 +10,6 @@ from aiogram.methods import AnswerCallbackQuery, EditMessageText, SendMessage
 from aiogram.types import CallbackQuery, Chat, ErrorEvent, Message, Update, User
 from uuid6 import uuid7
 
-import src.modules.finance.domain.enums
-import src.modules.users.domain.enums
 from src.api.schemas.pagination import PaginatedResponse
 from src.bot.callbacks.data import (
     ReminderActionCallback,
@@ -42,6 +40,8 @@ from src.bot.handlers.settings import (
 from src.bot.handlers.start import handle_cancel, handle_help, handle_start
 from src.bot.keyboards import BTN_CANCEL, BTN_MY_REMINDERS, BTN_RATES, BTN_SETTINGS
 from src.bot.states.settings_edit import SettingsEditStates
+from src.core.domain.enums import SystemRole
+from src.modules.finance.public import ExchangeRateProvider
 from src.modules.finance.queries.dto import ExchangeRateResponseDTO
 from src.modules.reminders.application.dto import ReminderActionCommand, ReminderActionType
 from src.modules.reminders.domain.enums import (
@@ -56,7 +56,6 @@ from src.modules.reminders.queries.dto import (
     ReminderResponseDTO,
 )
 from src.modules.users.application.dto import UpdateUserSettingsCommand
-from src.modules.users.domain.enums import ExchangeRateProvider, UserRole
 from src.modules.users.queries.dto import (
     TelegramAccountResponseDTO,
     UserResponseDTO,
@@ -76,7 +75,7 @@ def _make_dummy_user(
     return UserResponseDTO(
         id=uid,
         username="tester",
-        role=UserRole.USER,
+        role=SystemRole.USER,
         telegram_account=TelegramAccountResponseDTO(
             id=uuid7(),
             telegram_id=tg_id,
@@ -245,7 +244,7 @@ async def test_handle_rates() -> None:
     dummy_rates = [
         ExchangeRateResponseDTO(
             id=uuid7(),
-            provider=src.modules.finance.domain.enums.ExchangeRateProvider.MONOBANK,
+            provider=ExchangeRateProvider.MONOBANK,
             base_currency="UAH",
             target_currency="USD",
             rate_buy=Decimal("41.20"),
@@ -254,7 +253,7 @@ async def test_handle_rates() -> None:
         ),
         ExchangeRateResponseDTO(
             id=uuid7(),
-            provider=src.modules.finance.domain.enums.ExchangeRateProvider.NBU,
+            provider=ExchangeRateProvider.NBU,
             base_currency="UAH",
             target_currency="USD",
             rate_buy=None,

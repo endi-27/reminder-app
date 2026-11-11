@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
+from src.core.domain.enums import CurrencyCode
 from src.core.exceptions import ValidationException
-from src.modules.reminders.domain.enums import CurrencyCode
 
 
 @dataclass(frozen=True)

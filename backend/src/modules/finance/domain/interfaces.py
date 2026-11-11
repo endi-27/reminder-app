@@ -1,7 +1,8 @@
 from collections.abc import Sequence
 from typing import Protocol
 
-from src.modules.finance.domain.enums import CurrencyCode, ExchangeRateProvider
+from src.core.domain.enums import CurrencyCode
+from src.modules.finance.domain.enums import ExchangeRateProvider
 from src.modules.finance.domain.models import ExchangeRate
 
 
